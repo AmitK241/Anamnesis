@@ -1,0 +1,21 @@
+# Anamnesis – Backend Requirements
+# Generated for Python 3.10+
+
+# DataHub SDK (already installed in .venv)
+acryl-datahub>=1.6.0
+acryl-datahub[datahub-rest]
+
+# API server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Environment / config
+python-dotenv>=1.0.0
+
+# LangChain + Groq (for LLM-assisted agent reasoning – Day 3+)
+langchain>=0.3.0
+langchain-groq>=0.2.0
+langgraph>=0.2.0
+
+# DataHub agent context SDK (when available)
+# datahub-agent-context>=0.1.0
