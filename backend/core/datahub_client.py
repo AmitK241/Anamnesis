@@ -138,32 +138,96 @@ class DataHubAdapter:
         depth: int = 3,
     ) -> Dict[str, Any]:
         """
-        Get lineage graph for an entity.
+        Get direct (1-hop) lineage for a dataset via ``dataset.lineage``.
         direction: UPSTREAM | DOWNSTREAM
-        Returns raw GraphQL response dict.
+        Returns the raw GraphQL response dict.
         """
         gql = """
-        query Lineage($urn: String!, $input: LineageInput!) {
-          entity(urn: $urn) {
-            urn
-            type
-            ... on Dataset { name }
-            lineage(input: $input) {
+        query Lineage($urn: String!, $direction: String!, $count: Int!) {
+          dataset(urn: $urn) {
+            name
+            lineage(input: {direction: $direction, count: $count}) {
               relationships {
-                entity { urn type ... on Dataset { name } }
+                entity {
+                  urn
+                  type
+                  ... on Dataset { name }
+                  ... on DataJob  { jobId dataFlow { flowId } }
+                  ... on Dashboard { dashboardId }
+                }
               }
             }
           }
         }
         """
         try:
-            return self._gql(gql, {
-                "urn": urn,
-                "input": {"direction": direction, "count": 100},
-            })
+            return self._gql(gql, {"urn": urn, "direction": direction, "count": 100})
         except Exception as exc:
             logger.error("get_lineage failed for %s: %s", urn, exc)
             return {}
+
+    def get_lineage_scroll(
+        self,
+        urn: str,
+        direction: str = "DOWNSTREAM",
+        max_hops: int = 3,
+        count: int = 50,
+    ) -> List[Dict[str, Any]]:
+        """
+        Multi-hop lineage via ``scrollAcrossLineage``.
+        Returns list of {urn, type, name, degree} dicts, de-duplicated.
+        direction: UPSTREAM | DOWNSTREAM
+        """
+        gql = """
+        query ScrollLineage($urn: String!, $direction: LineageDirection!, $count: Int!) {
+          scrollAcrossLineage(input: {
+            urn: $urn
+            direction: $direction
+            count: $count
+            query: "*"
+          }) {
+            searchResults {
+              degree
+              entity {
+                urn
+                type
+                ... on Dataset  { name }
+                ... on DataJob  { jobId }
+                ... on Dashboard { dashboardId }
+              }
+            }
+          }
+        }
+        """
+        try:
+            data = self._gql(gql, {
+                "urn": urn,
+                "direction": direction.upper(),
+                "count": count,
+            })
+            results = (
+                data.get("data", {})
+                    .get("scrollAcrossLineage", {})
+                    .get("searchResults", [])
+            )
+            seen: set = set()
+            entities: List[Dict[str, Any]] = []
+            for r in results:
+                e = r.get("entity") or {}
+                entity_urn = e.get("urn", "")
+                if not entity_urn or entity_urn in seen:
+                    continue
+                seen.add(entity_urn)
+                entities.append({
+                    "urn":    entity_urn,
+                    "type":   e.get("type", ""),
+                    "name":   e.get("name") or e.get("jobId") or e.get("dashboardId") or "",
+                    "degree": r.get("degree", 1),
+                })
+            return entities
+        except Exception as exc:
+            logger.error("get_lineage_scroll failed for %s: %s", urn, exc)
+            return []
 
     # ── schema ────────────────────────────────────────────────────────────────
 
@@ -234,3 +298,188 @@ class DataHubAdapter:
         except Exception as exc:
             logger.debug("get_recent_incidents not supported or failed: %s", exc)
             return []
+
+    # ── incidentMemory aspect scroll ──────────────────────────────────────────
+
+    def scroll_incident_memories(self, max_results: int = 500) -> List[Dict[str, Any]]:
+        """
+        Fetch ALL IncidentMemory aspects stored across datasets in DataHub.
+
+        Strategy (tried in order):
+        1. GraphQL ``searchAcrossEntities`` with an ``_exists_`` filter for the
+           ``incidentMemory`` aspect — works on DataHub >= 0.12 with OpenSearch.
+        2. Env-var fallback: read ``ANAMNESIS_KNOWN_DATASET_URNS`` (pipe-separated
+           list of dataset URNs, e.g. ``urn:li:....|urn:li:....``).  Use ``|``
+           not ``,`` because DataHub URNs themselves contain commas.
+           This is always populated by verify scripts.
+
+        Returns a list of dicts, one per stored IncidentMemory, each containing::
+
+            {
+                "dataset_urn":           str,
+                "incident_id":           str,
+                "root_cause":            str,
+                "embedding_vector":      list[float],
+                "resolution_code_diff":  str,
+                "time_saved_estimate":   int,
+                "downstream_impact":     list[str],
+                "timestamp":             int,
+            }
+
+        Missing optional fields default to empty/zero.  Records with no
+        ``embeddingVector`` or an empty one are included (recall agent will
+        skip them since cosine_similarity returns 0.0 for zero vectors).
+        """
+        import json
+        import urllib.parse
+        import urllib.request
+
+        urns: List[str] = []
+
+        # ── Strategy 1: GraphQL _exists_ filter ───────────────────────────────
+        try:
+            gql = """
+            query FindIncidentMemoryDatasets($count: Int!) {
+              searchAcrossEntities(input: {
+                types: [DATASET]
+                query: "*"
+                count: $count
+                filters: [{field: "_exists_", values: ["incidentMemory"]}]
+              }) {
+                searchResults { entity { urn } }
+              }
+            }
+            """
+            data = self._gql(gql, {"count": max_results})
+            results = (
+                data.get("data", {})
+                    .get("searchAcrossEntities", {})
+                    .get("searchResults", [])
+            )
+            gql_urns = [r["entity"]["urn"] for r in results if r.get("entity", {}).get("urn")]
+            if gql_urns:
+                logger.info(
+                    "scroll_incident_memories: found %d dataset(s) via GraphQL _exists_ filter",
+                    len(gql_urns),
+                )
+                urns = gql_urns
+            else:
+                logger.debug("GraphQL _exists_ filter returned 0 results — trying fallback")
+        except Exception as exc:
+            logger.debug("GraphQL _exists_ filter not supported or failed: %s", exc)
+
+        # ── Strategy 2: env-var fallback ─────────────────────────────────────
+        if not urns:
+            env_urns = os.getenv("ANAMNESIS_KNOWN_DATASET_URNS", "")
+            if env_urns.strip():
+                # Split on | because DataHub URNs contain commas internally
+                urns = [u.strip() for u in env_urns.split("|") if u.strip()]
+                logger.info(
+                    "scroll_incident_memories: using %d URN(s) from "
+                    "ANAMNESIS_KNOWN_DATASET_URNS env var",
+                    len(urns),
+                )
+
+        # ── Strategy 3: broad dataset scan ───────────────────────────────
+        # Custom aspects are NOT indexed by DataHub's _exists_ filter, so
+        # Strategy 1 always returns 0 for incidentMemory.  Instead we fetch
+        # all dataset URNs via a plain searchAcrossEntities and probe each
+        # one — the same approach used by scratch_audit.py.
+        if not urns:
+            try:
+                gql_all = """
+                query AllDatasets($count: Int!) {
+                  searchAcrossEntities(input: {
+                    types: [DATASET]
+                    query: "*"
+                    count: $count
+                  }) {
+                    searchResults { entity { urn } }
+                  }
+                }
+                """
+                data_all = self._gql(gql_all, {"count": max_results})
+                all_results = (
+                    data_all.get("data", {})
+                           .get("searchAcrossEntities", {})
+                           .get("searchResults", [])
+                )
+                all_urns = [
+                    r["entity"]["urn"]
+                    for r in all_results
+                    if r.get("entity", {}).get("urn")
+                ]
+                if all_urns:
+                    logger.info(
+                        "scroll_incident_memories: broad scan — probing %d dataset(s) for "
+                        "incidentMemory aspect",
+                        len(all_urns),
+                    )
+                    urns = all_urns
+                else:
+                    logger.info(
+                        "scroll_incident_memories: broad scan returned 0 datasets; "
+                        "returning empty list"
+                    )
+                    return []
+            except Exception as exc:
+                logger.warning("scroll_incident_memories: broad scan failed: %s", exc)
+                return []
+
+        # ── Fetch aspect for each URN ─────────────────────────────────────────
+        records: List[Dict[str, Any]] = []
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+
+        for urn in urns:
+            encoded = urllib.parse.quote(urn, safe="")
+            url = f"{self.server}/aspects/{encoded}?aspect=incidentMemory&version=0"
+            try:
+                req = urllib.request.Request(url, headers=headers)
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    raw = json.loads(resp.read())
+
+                # Unwrap the aspect value (same pattern as verify_incident_memory.py)
+                aspect_data = raw.get("aspect", {})
+                if isinstance(aspect_data, dict) and "value" in aspect_data:
+                    try:
+                        aspect_data = json.loads(aspect_data["value"])
+                    except json.JSONDecodeError:
+                        pass
+                # Unwrap FQCN wrapper: {"com.anamnesis.incident.IncidentMemory": {...}}
+                if isinstance(aspect_data, dict) and len(aspect_data) == 1:
+                    only_key = next(iter(aspect_data))
+                    if "." in only_key:
+                        aspect_data = aspect_data[only_key]
+
+                if not isinstance(aspect_data, dict):
+                    logger.debug("Skipping %s — aspect_data is not a dict", urn)
+                    continue
+
+                incident_id = aspect_data.get("incidentId", "")
+                # Skip blank sentinel records left by wipe operations
+                # (DataHub doesn't support hard-deleting custom aspects)
+                if not incident_id or incident_id == "__WIPED__":
+                    logger.debug("Skipping wiped/empty incidentMemory for %s", urn)
+                    continue
+
+                records.append({
+                    "dataset_urn":          urn,
+                    "incident_id":          incident_id,
+                    "root_cause":           aspect_data.get("rootCause", ""),
+                    "embedding_vector":     aspect_data.get("embeddingVector", []),
+                    "resolution_code_diff": aspect_data.get("resolutionCodeDiff", ""),
+                    "time_saved_estimate":  aspect_data.get("timeSavedEstimate", 0),
+                    "downstream_impact":    aspect_data.get("downstreamImpact", []),
+                    "timestamp":            aspect_data.get("timestamp", 0),
+                })
+                logger.debug("Loaded incidentMemory for %s (id=%s)", urn, incident_id)
+
+            except Exception as exc:
+                # 404 means no aspect on this dataset — silently skip
+                if "404" not in str(exc):
+                    logger.debug("Could not fetch incidentMemory for %s: %s", urn, exc)
+
+        logger.info("scroll_incident_memories: loaded %d record(s)", len(records))
+        return records

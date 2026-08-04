@@ -15,16 +15,25 @@ Endpoints:
   POST /api/detect                   – Run schema detector for a dataset
   POST /api/diagnose                 – Run diagnoser for a detected diff
   POST /api/detect-and-diagnose      – Combined one-shot endpoint
+  POST /api/recall                   – Find semantically similar past incidents
+  POST /api/fix                      – Generate a fix for a detected schema break
+  POST /api/write-memory             – Write pipeline output as IncidentMemory to DataHub
+  POST /api/full-loop                – Run ENTIRE pipeline in one call (demo magic button)
+
+  GET  /                             – Anamnesis dashboard (frontend)
 
 Start dev server:
   cd d:\\Anamnesis
   .venv\\Scripts\\uvicorn backend.api.main:app --reload --port 8888
+  Then open: http://localhost:8888
 """
 
 from __future__ import annotations
 
 import logging
 import os
+import pathlib
+from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -33,19 +42,40 @@ logger = logging.getLogger(__name__)
 try:
     from fastapi import FastAPI, HTTPException
     from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
     from pydantic import BaseModel
 except ImportError:
     raise RuntimeError("FastAPI not installed. Run: pip install fastapi uvicorn")
 
 from backend.agents.detector import SchemaDetector
 from backend.agents.diagnoser import Diagnoser
+from backend.agents.fixer import FixerAgent
+from backend.agents.memory_writer import MemoryWriterAgent
+from backend.agents.recall import MemoryRecallAgent
 from backend.core.datahub_client import DataHubAdapter
 from backend.core.memory_store import MemoryRecord, MemoryStore, MemoryType, get_store
+
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    """Pre-warm the sentence-transformer model at startup so the first
+    /api/recall call returns quickly instead of timing out."""
+    logger.info("[startup] Pre-warming sentence-transformer embedding model…")
+    try:
+        from backend.core.embeddings import _get_model
+        _get_model()  # loads & caches model in the worker process
+        logger.info("[startup] Embedding model ready.")
+    except Exception as exc:
+        logger.warning("[startup] Could not pre-warm embedding model: %s", exc)
+    yield
+    # (shutdown hook – nothing needed)
+
 
 app = FastAPI(
     title="Anamnesis",
     description="Persistent memory layer for AI data agents, built on DataHub",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -62,6 +92,9 @@ _store: MemoryStore = get_store()
 _dh: DataHubAdapter = DataHubAdapter()
 _detector: SchemaDetector = SchemaDetector(datahub=_dh, store=_store)
 _diagnoser: Diagnoser = Diagnoser(datahub=_dh, store=_store)
+_recall: MemoryRecallAgent = MemoryRecallAgent(datahub=_dh)
+_fixer: FixerAgent = FixerAgent()
+_writer: MemoryWriterAgent = MemoryWriterAgent()
 
 
 # ── pydantic models ───────────────────────────────────────────────────────────
@@ -88,17 +121,64 @@ class MemoryPatch(BaseModel):
 
 class DetectRequest(BaseModel):
     dataset_urn: str
+    # Supply a {field_name: type_string} dict to run detect_schema_break().
+    # Leave empty to use the legacy in-memory-baseline detect() path.
+    known_good_schema: Optional[Dict[str, str]] = None
+    # Set to True to run the built-in demo simulation (ignores known_good_schema).
+    simulate: bool = False
     auto_capture_baseline: bool = True
 
 
 class DiagnoseRequest(BaseModel):
-    dataset_urn: str
-    diff: Dict[str, Any]
+    # New-style: pass the detection_result dict from /api/detect directly.
+    detection_result: Optional[Dict[str, Any]] = None
+    # Legacy-style: pass dataset_urn + diff dict manually.
+    dataset_urn: Optional[str] = None
+    diff: Optional[Dict[str, Any]] = None
     memory_id: Optional[str] = None
 
 
 class DetectAndDiagnoseRequest(BaseModel):
     dataset_urn: str
+
+
+class RecallRequest(BaseModel):
+    # Option A: pass a pre-computed diagnosis dict directly
+    diagnosis: Optional[Dict[str, Any]] = None
+    # Option B: re-run detect+diagnose for this dataset, then recall
+    dataset_urn: Optional[str] = None
+    simulate: bool = False
+    # Recall tuning params
+    top_k: int = 3
+    min_similarity: float = 0.75
+
+
+class FixRequest(BaseModel):
+    # Option A: pass pre-computed dicts from prior pipeline stages
+    diagnosis: Optional[Dict[str, Any]] = None
+    recall_result: Optional[Dict[str, Any]] = None
+    # Option B: run the full pipeline (detect -> diagnose -> recall -> fix)
+    dataset_urn: Optional[str] = None
+    simulate: bool = False
+    # Recall tuning params (only used in Option B)
+    top_k: int = 3
+    min_similarity: float = 0.75
+
+
+class WriteMemoryRequest(BaseModel):
+    """Pass all four pipeline stage outputs to write an IncidentMemory to DataHub."""
+    detection: Dict[str, Any]
+    diagnosis: Dict[str, Any]
+    recall_result: Dict[str, Any]
+    fix_result: Dict[str, Any]
+
+
+class FullLoopRequest(BaseModel):
+    """Single-call demo endpoint — runs the ENTIRE pipeline end-to-end."""
+    dataset_urn: str
+    simulate: bool = True          # always True for demo; set False for live detection
+    top_k: int = 3
+    min_similarity: float = 0.75
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
@@ -181,36 +261,487 @@ def delete_memory(record_id: str):
 
 @app.post("/api/detect")
 def detect(body: DetectRequest):
-    """Run schema detector for a dataset."""
-    result = _detector.detect(
-        dataset_urn=body.dataset_urn,
-        auto_capture_baseline=body.auto_capture_baseline,
-    )
+    """
+    Run the schema detector for a dataset.  Three modes:
+
+    1. simulate=true  — built-in demo: fetches live schema and artificially
+                        injects two dropped fields + one type-change.
+    2. known_good_schema provided — compare live schema against the supplied
+                        baseline dict {field_name: type_string}.
+    3. neither         — legacy mode: compare against a previously captured
+                        in-memory baseline (auto-captures on first call).
+    """
+    if body.simulate:
+        result = _detector.simulate_schema_break(dataset_urn=body.dataset_urn)
+    elif body.known_good_schema:
+        result = _detector.detect_schema_break(
+            dataset_urn=body.dataset_urn,
+            known_good_schema=body.known_good_schema,
+        )
+    else:
+        result = _detector.detect(
+            dataset_urn=body.dataset_urn,
+            auto_capture_baseline=body.auto_capture_baseline,
+        )
     return result
 
 
 @app.post("/api/diagnose")
 def diagnose(body: DiagnoseRequest):
-    """Run diagnoser for a detected schema diff."""
-    result = _diagnoser.diagnose(
-        dataset_urn=body.dataset_urn,
-        diff=body.diff,
-        memory_id=body.memory_id,
-    )
+    """
+    Run the Diagnoser for a detected schema break.  Two modes:
+
+    1. detection_result provided — new-style: pass the full dict from /api/detect.
+       Returns: {root_cause, upstream_sources, downstream_impact, ...}
+
+    2. dataset_urn + diff provided — legacy-style: accepts the old diff dict format.
+       Returns: {diff_summary, downstream_entities, remediation_plan, ...}
+    """
+    if body.detection_result:
+        result = _diagnoser.diagnose(body.detection_result)
+    elif body.dataset_urn and body.diff is not None:
+        result = _diagnoser.diagnose(
+            dataset_urn=body.dataset_urn,
+            diff=body.diff,
+            memory_id=body.memory_id,
+        )
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide either 'detection_result' or both 'dataset_urn' and 'diff'.",
+        )
     return result
 
 
 @app.post("/api/detect-and-diagnose")
 def detect_and_diagnose(body: DetectAndDiagnoseRequest):
-    """Combined: detect schema changes + diagnose impact in one call."""
-    detection = _detector.detect(dataset_urn=body.dataset_urn)
+    """Combined: simulate a schema break on the dataset, then diagnose it."""
+    detection = _detector.simulate_schema_break(dataset_urn=body.dataset_urn)
 
-    if not detection.get("has_changes"):
+    if not detection.get("has_break") and not detection.get("has_changes"):
         return {"detection": detection, "diagnosis": None}
 
-    diagnosis = _diagnoser.diagnose(
-        dataset_urn=body.dataset_urn,
-        diff=detection["diff"],
-        memory_id=detection.get("memory_id"),
-    )
+    diagnosis = _diagnoser.diagnose(detection)
     return {"detection": detection, "diagnosis": diagnosis}
+
+
+@app.post("/api/recall")
+def recall(body: RecallRequest):
+    """
+    Find semantically similar past incidents using embeddings + cosine similarity.
+
+    Two modes:
+
+    1. ``diagnosis`` provided — use it directly as the query. Must contain at
+       least ``root_cause`` (str); optionally ``missing_fields`` and
+       ``type_changes`` for richer embeddings.
+
+    2. ``dataset_urn`` provided (+ optional ``simulate=true``) — runs the
+       Schema Detector (simulate mode) followed by the Diagnoser to build the
+       diagnosis automatically, then performs recall.
+
+    Returns top-k past incidents above ``min_similarity`` threshold (cosine),
+    sorted descending by similarity score.  An empty match list with
+    ``no_similar_incidents_found: true`` is returned when no past incidents
+    exist or none clear the threshold — this is not an error condition.
+    """
+    if body.diagnosis is not None:
+        diagnosis = body.diagnosis
+    elif body.dataset_urn:
+        # Run detect → diagnose first
+        if body.simulate:
+            detection = _detector.simulate_schema_break(dataset_urn=body.dataset_urn)
+        else:
+            detection = _detector.detect(
+                dataset_urn=body.dataset_urn,
+                auto_capture_baseline=True,
+            )
+
+        if not detection.get("has_break") and not detection.get("has_changes"):
+            # No schema break — still run recall with a minimal diagnosis so
+            # the caller gets a consistent response shape.
+            diagnosis = {
+                "dataset_urn": body.dataset_urn,
+                "root_cause":  "No schema break detected.",
+                "missing_fields": [],
+                "type_changes": [],
+            }
+        else:
+            diagnosis = _diagnoser.diagnose(detection)
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide either 'diagnosis' dict or 'dataset_urn'.",
+        )
+
+    return _recall.recall_similar_incidents(
+        diagnosis=diagnosis,
+        top_k=body.top_k,
+        min_similarity=body.min_similarity,
+    )
+
+
+@app.post("/api/fix")
+def fix(body: FixRequest):
+    """
+    Generate a concrete fix suggestion for a detected schema break.
+
+    Two call modes:
+
+    **Option A** — pass pre-computed pipeline outputs directly::
+
+        {
+          "diagnosis": {...},       # from /api/diagnose
+          "recall_result": {...}    # from /api/recall  (may be empty / no-matches)
+        }
+
+    **Option B** — run the full pipeline in one call::
+
+        {
+          "dataset_urn": "urn:li:dataset:...",
+          "simulate": true,         # use built-in schema-break simulation
+          "top_k": 3,
+          "min_similarity": 0.75
+        }
+
+    Returns::
+
+        {
+          "mode": "adapted" | "generated_fresh",
+          "suggested_fix": str,
+          "based_on_incident_id": str | null,
+          "confidence_note": str,
+          "estimated_time_saved_minutes": int | null
+        }
+    """
+    # ── Resolve diagnosis and recall_result ─────────────────────────────────
+    if body.diagnosis is not None and body.recall_result is not None:
+        # Option A: both supplied directly — use as-is
+        diagnosis     = body.diagnosis
+        recall_result = body.recall_result
+
+    elif body.dataset_urn:
+        # Option B: run the full pipeline
+        if body.simulate:
+            detection = _detector.simulate_schema_break(dataset_urn=body.dataset_urn)
+        else:
+            detection = _detector.detect(
+                dataset_urn=body.dataset_urn,
+                auto_capture_baseline=True,
+            )
+
+        if not detection.get("has_break") and not detection.get("has_changes"):
+            diagnosis = {
+                "dataset_urn": body.dataset_urn,
+                "root_cause":  "No schema break detected.",
+                "missing_fields": [],
+                "type_changes": [],
+            }
+        else:
+            diagnosis = _diagnoser.diagnose(detection)
+
+        recall_result = _recall.recall_similar_incidents(
+            diagnosis=diagnosis,
+            top_k=body.top_k,
+            min_similarity=body.min_similarity,
+        )
+
+    elif body.diagnosis is not None:
+        # Partial Option A: diagnosis supplied, no recall_result — treat as no matches
+        diagnosis = body.diagnosis
+        recall_result = {
+            "matches": [],
+            "no_similar_incidents_found": True,
+            "total_past_incidents_checked": 0,
+        }
+
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Provide either ('diagnosis' + 'recall_result') "
+                "or 'dataset_urn' to run the full pipeline."
+            ),
+        )
+
+    # ── Generate fix ─────────────────────────────────────────────────────────
+    try:
+        return _fixer.generate_fix(diagnosis=diagnosis, recall_result=recall_result)
+    except RuntimeError as exc:
+        # Propagate GROQ_API_KEY-not-set as a clear 503 with the hint
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.post("/api/write-memory")
+def write_memory(body: WriteMemoryRequest):
+    """
+    Write the full pipeline output into DataHub as a new IncidentMemory aspect.
+
+    Accepts the four pipeline stage outputs directly (detection, diagnosis,
+    recall_result, fix_result) and returns a write-confirmation result
+    including the generated incident_id and a round-trip read-back
+    verification flag.
+
+    This closes the loop: the new incident is immediately discoverable by
+    future recall calls against similar schema breaks.
+
+    Returns::
+
+        {
+            "success":      bool,
+            "incident_id":  str,
+            "dataset_urn":  str,
+            "written_at":   int,   # epoch millis
+            "verification": str    # "confirmed via read-back" or error detail
+        }
+    """
+    try:
+        return _writer.write_incident_memory(
+            detection=body.detection,
+            diagnosis=body.diagnosis,
+            recall_result=body.recall_result,
+            fix_result=body.fix_result,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.post("/api/full-loop")
+def full_loop(body: FullLoopRequest):
+    """
+    **Demo magic-button endpoint** — runs the ENTIRE Anamnesis pipeline in a
+    single API call and returns all five stage outputs together.
+
+    Pipeline stages (in order):
+    1. **Detect**       — simulate (or live-detect) a schema break on ``dataset_urn``.
+    2. **Diagnose**     — build root-cause narrative + lineage blast radius.
+    3. **Recall**       — find semantically similar past incidents via embeddings.
+    4. **Fix**          — generate a concrete fix (adapted or fresh via Groq LLM).
+    5. **Write-memory** — persist the new incident back into DataHub.
+
+    Returns::
+
+        {
+            "detection":    {...},
+            "diagnosis":    {...},
+            "recall":       {...},
+            "fix":          {...},
+            "write_memory": {
+                "success":      bool,
+                "incident_id":  str,
+                "dataset_urn":  str,
+                "written_at":   int,
+                "verification": str
+            }
+        }
+    """
+    # ── Stage 1: Detect ───────────────────────────────────────────────────────
+    if body.simulate:
+        detection = _detector.simulate_schema_break(dataset_urn=body.dataset_urn)
+    else:
+        detection = _detector.detect(
+            dataset_urn=body.dataset_urn,
+            auto_capture_baseline=True,
+        )
+
+    # ── Stage 2: Diagnose ─────────────────────────────────────────────────────
+    # detect_schema_break/simulate_schema_break return has_break (new-style);
+    # legacy detect() returns has_changes — check both so the pipeline is
+    # correct regardless of which detection mode was used.
+    if detection.get("has_break") or detection.get("has_changes"):
+        diagnosis = _diagnoser.diagnose(detection)
+        # Ensure missing_fields / type_changes are always present on diagnosis
+        if "missing_fields" not in diagnosis:
+            diagnosis["missing_fields"] = detection.get("missing_fields", [])
+        if "type_changes" not in diagnosis:
+            diagnosis["type_changes"] = detection.get("type_changes", [])
+    else:
+        diagnosis = {
+            "dataset_urn":          body.dataset_urn,
+            "root_cause":           "No schema break detected.",
+            "missing_fields":       [],
+            "type_changes":         [],
+            "downstream_impact":    [],
+            "diagnosis_confidence": "low",
+            "break_summary":        "No breaks detected",
+        }
+
+    # ── Stage 3: Recall ───────────────────────────────────────────────────────
+    recall_result = _recall.recall_similar_incidents(
+        diagnosis=diagnosis,
+        top_k=body.top_k,
+        min_similarity=body.min_similarity,
+    )
+
+    # ── Stage 4: Fix ──────────────────────────────────────────────────────────
+    try:
+        fix_result = _fixer.generate_fix(
+            diagnosis=diagnosis,
+            recall_result=recall_result,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    # ── Stage 5: Write-memory ─────────────────────────────────────────────────
+    # Skip the write when no break was detected.  Writing a hollow IncidentMemory
+    # (empty root_cause, no missing fields, no fix) is semantically meaningless
+    # and causes DataHub to return HTTP 500 when the entity URN is also empty
+    # (which it always is for the legacy detect() path that doesn't include
+    # dataset_urn in its output dict).
+    no_break = (
+        not detection.get("has_break")
+        and not detection.get("has_changes")
+    )
+    if no_break:
+        write_result = {
+            "success":      False,
+            "incident_id":  None,
+            "dataset_urn":  body.dataset_urn,
+            "written_at":   None,
+            "verification": "skipped — no schema break was detected; nothing meaningful to persist",
+        }
+    else:
+        write_result = _writer.write_incident_memory(
+            detection=detection,
+            diagnosis=diagnosis,
+            recall_result=recall_result,
+            fix_result=fix_result,
+        )
+
+    return {
+        "detection":    detection,
+        "diagnosis":    diagnosis,
+        "recall":       recall_result,
+        "fix":          fix_result,
+        "write_memory": write_result,
+    }
+
+
+@app.get("/api/incidents")
+def get_incidents_graph():
+    """
+    Returns the Memory Constellation graph — all IncidentMemory records from
+    DataHub as force-directed graph nodes + edges derived from their stored
+    embedding vectors (cosine similarity, same math as the recall agent).
+
+    Filters out __WIPED__ / empty sentinel records automatically via
+    scroll_incident_memories() — they never appear as graph nodes.
+
+    Response shape::
+
+        {
+          "nodes": [
+            {
+              "id": "INC-...",
+              "dataset": "orders",
+              "dataset_urn": "urn:li:dataset:...",
+              "timestamp_ms": 1785477232503
+            },
+            ...
+          ],
+          "edges": [
+            {
+              "source": "INC-...",
+              "target": "INC-...",
+              "similarity": 0.971,
+              "label": "Strong Match"
+            },
+            ...
+          ]
+        }
+
+    Edges are only included when similarity >= 0.70 so weak noise connections
+    don't clutter the graph at hackathon scale.
+    """
+    import math
+
+    records = _dh.scroll_incident_memories()
+
+    # ── Build nodes ───────────────────────────────────────────────────────────
+    def _dataset_short(urn: str) -> str:
+        """Extract the middle table-path segment from a DataHub URN."""
+        parts = urn.split(",")
+        if len(parts) >= 2:
+            # e.g. "b2fd91.crm_db.customers" → "customers"
+            path = parts[1].strip()
+            return path.split(".")[-1] if "." in path else path
+        return urn
+
+    nodes = [
+        {
+            "id":          r["incident_id"],
+            "dataset":     _dataset_short(r["dataset_urn"]),
+            "dataset_urn": r["dataset_urn"],
+            "timestamp_ms": r["timestamp"],
+        }
+        for r in records
+        if r.get("incident_id")
+    ]
+
+    # ── Build edges via pairwise cosine similarity ────────────────────────────
+    def _cosine(a: List[float], b: List[float]) -> float:
+        if not a or not b or len(a) != len(b):
+            return 0.0
+        dot = sum(x * y for x, y in zip(a, b))
+        mag_a = math.sqrt(sum(x * x for x in a))
+        mag_b = math.sqrt(sum(x * x for x in b))
+        if mag_a == 0 or mag_b == 0:
+            return 0.0
+        return dot / (mag_a * mag_b)
+
+    def _sim_label(sim: float) -> str:
+        if sim >= 0.90:
+            return "Strong Match"
+        if sim >= 0.80:
+            return "Related Match"
+        if sim >= 0.65:
+            return "Possible Match"
+        return "Weak Match"
+
+    MIN_EDGE_SIM = 0.70
+    edges = []
+    for i, a in enumerate(records):
+        for b in records[i + 1:]:
+            if not a.get("incident_id") or not b.get("incident_id"):
+                continue
+            sim = _cosine(a.get("embedding_vector", []), b.get("embedding_vector", []))
+            if sim >= MIN_EDGE_SIM:
+                edges.append({
+                    "source":     a["incident_id"],
+                    "target":     b["incident_id"],
+                    "similarity": round(sim, 4),
+                    "label":      _sim_label(sim),
+                })
+
+    # Sort edges strongest-first for stable rendering
+    edges.sort(key=lambda e: e["similarity"], reverse=True)
+
+    return {"nodes": nodes, "edges": edges}
+
+
+# ── Static file serving (frontend dashboard) ─────────────────────────────────
+# Mount the entire frontend/ directory at "/" so index.html's relative asset
+# references (href="style.css", src="app.js") resolve at their natural paths
+# without any prefix — no changes needed to index.html.
+#
+# Routing safety: all @app.get / @app.post routes defined above are registered
+# first in Starlette's route table and always matched before this mount.
+# Requests to /api/*, /health, /docs, /openapi.json etc. are unaffected.
+# Only paths that match no explicit route fall through to this StaticFiles handler.
+#
+# html=True makes StaticFiles serve index.html automatically for GET /
+# so no separate "serve_dashboard" route is required.
+
+_FRONTEND_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "frontend"
+
+if _FRONTEND_DIR.exists():
+    app.mount(
+        "/",
+        StaticFiles(directory=str(_FRONTEND_DIR), html=True),
+        name="frontend",
+    )
+    logger.info("Frontend mounted from %s at /", _FRONTEND_DIR)
+else:
+    logger.warning(
+        "Frontend directory not found at %s — dashboard unavailable", _FRONTEND_DIR
+    )

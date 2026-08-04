@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from __future__ import annotations
 """
 Anamnesis – Demo Scenario Script
 ===================================
@@ -15,7 +17,9 @@ Run:
     .venv\\Scripts\\python backend/demo_scenario.py
 """
 
-from __future__ import annotations
+import sys
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 import json
 import logging

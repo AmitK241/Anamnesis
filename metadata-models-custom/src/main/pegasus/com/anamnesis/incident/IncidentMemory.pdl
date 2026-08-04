@@ -1,0 +1,55 @@
+namespace com.anamnesis.incident
+
+/**
+ * Captures memory of a past incident associated with a dataset, including
+ * root cause, downstream impact, resolution details, and AI-generated embeddings
+ * for similarity search across historical incidents.
+ */
+@Aspect = {
+  "name": "incidentMemory"
+}
+record IncidentMemory {
+
+  /**
+   * Unique identifier for this incident.
+   */
+  incidentId: string
+
+  /**
+   * Human-readable description of the root cause of the incident.
+   */
+  rootCause: string
+
+  /**
+   * URNs of datasets that were impacted downstream by this incident.
+   */
+  downstreamImpact: array[string]
+
+  /**
+   * Unified diff of the code change that resolved the incident.
+   */
+  resolutionCodeDiff: string
+
+  /**
+   * Dense embedding vector representing the semantic content of the incident
+   * for similarity search against past incidents.
+   */
+  embeddingVector: array[float]
+
+  /**
+   * URNs of past datasets tagged with incidentMemory that are semantically
+   * similar to this incident.
+   */
+  similarPastIncidents: array[string]
+
+  /**
+   * Estimated time saved (in minutes) by referencing this incident memory
+   * during future incident response.
+   */
+  timeSavedEstimate: optional int
+
+  /**
+   * Unix epoch timestamp (milliseconds) when this incident memory was recorded.
+   */
+  timestamp: long
+}

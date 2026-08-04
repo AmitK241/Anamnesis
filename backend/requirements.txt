@@ -19,3 +19,7 @@ langgraph>=0.2.0
 
 # DataHub agent context SDK (when available)
 # datahub-agent-context>=0.1.0
+
+# Semantic similarity / Memory-Recall agent
+sentence-transformers>=3.0.0
+numpy>=1.24.0

@@ -1,0 +1,5 @@
+id: anamnesis-incident-model
+entities:
+  - name: dataset
+    aspects:
+      - incidentMemory

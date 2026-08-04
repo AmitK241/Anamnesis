@@ -1,0 +1,131 @@
+// =============================================================================
+// Standalone build.gradle for Anamnesis custom DataHub metadata model plugin
+//
+// This project is intentionally kept OUTSIDE the DataHub monorepo.
+// It uses published Maven artifacts instead of internal project dependencies.
+//
+// Prerequisites:
+//   - JDK 17 or 21 (required by DataHub; use https://adoptium.net/)
+//   - Gradle 8 wrapper (included — run via .\gradlew.bat build)
+//
+// Usage:
+//   .\gradlew.bat build                     # produces build/dist/*.zip
+//   .\gradlew.bat build -PprojVersion=0.1.0 # versioned artifact
+// =============================================================================
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+// ---------------------------------------------------------------------------
+// Version
+// ---------------------------------------------------------------------------
+if (project.hasProperty('projVersion')) {
+    project.version = project.projVersion
+} else {
+    project.version = '0.0.0-dev'
+}
+
+group = 'com.anamnesis'
+
+// ---------------------------------------------------------------------------
+// Repositories
+// ---------------------------------------------------------------------------
+repositories {
+    mavenCentral()
+    maven { url 'https://repository.jboss.org/nexus/content/repositories/releases/' }
+    // DataHub OSS artifacts are on LinkedIn's open-source Maven repo
+    maven { url 'https://linkedin.jfrog.io/artifactory/open-source/' }
+}
+
+// ---------------------------------------------------------------------------
+// DataHub version — keep in sync with your running DataHub instance
+// ---------------------------------------------------------------------------
+def datahubVersion = '1.0.0'
+
+dependencies {
+    // Pegasus (Rest.li) data library provides the runtime base classes
+    implementation "com.linkedin.pegasus:data:29.51.21"
+
+    // DataHub custom plugin library (published separately)
+    // NOTE: if this artifact is unavailable on Maven Central for your DataHub
+    // version, use the manual zip packaging script instead:
+    //   python scripts/package_plugin.py
+    compileOnly "io.datahubproject:custom-plugin-lib:${datahubVersion}"
+}
+
+// ---------------------------------------------------------------------------
+// Source sets — Pegasus PDL files
+// ---------------------------------------------------------------------------
+sourceSets {
+    main {
+        resources {
+            srcDirs 'src/main/pegasus', 'registry'
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Plugin zip assembly
+//
+// IMPORTANT: DataHub GMS DataSchemaFactory.loadPdlClassesOptimized does NOT
+// load raw .pdl source files. It requires a JAR on the classpath that contains:
+//
+//   META-INF/pegasus-models.idx          <- one fully-qualified class name per line
+//   com/anamnesis/incident/IncidentMemory.class (+ inner classes)
+//
+// The correct plugin directory layout GMS expects is:
+//
+//   entity-registry.yaml                 <- at version dir root
+//   anamnesis-incident-model.jar         <- compiled JAR (see below)
+//
+// Because Pegasus codegen (PDL → Java → .class) requires the Pegasus generator
+// and a JDK, and the DataHub quickstart image only ships a JRE, we perform
+// codegen + compile inside the GMS container using:
+//
+//   docker exec -u root <container> /bin/sh /tmp/build_plugin.sh
+//
+// (See scripts/build_plugin.sh and scripts/compile_and_package.sh)
+//
+// This Gradle task only produces a zip containing the raw PDL + registry for
+// source distribution / version-control purposes — it is NOT used by GMS directly.
+// ---------------------------------------------------------------------------
+task modelArtifact(type: Zip) {
+    archiveBaseName = 'metadata-models-custom'
+    archiveVersion  = project.version
+    destinationDirectory = file("${buildDir}/dist")
+
+    // Registry file at zip root
+    from('registry') {
+        include 'entity-registry.yaml'
+    }
+    // PDL source files (for reference/distribution — NOT loaded directly by GMS)
+    from('src/main/pegasus') {
+        include '**/*.pdl'
+    }
+}
+
+// Wire modelArtifact into the normal build lifecycle
+build.dependsOn modelArtifact
+
+// ---------------------------------------------------------------------------
+// modelDeploy — installs the zip into ~/.datahub/plugins/models/<id>/<version>
+// Run: .\gradlew.bat modelDeploy
+// ---------------------------------------------------------------------------
+task modelDeploy(type: Copy, dependsOn: modelArtifact) {
+    def registryId      = 'anamnesis-incident-model'
+    def registryVersion = project.version
+    def pluginBase      = "${System.getProperty('user.home')}/.datahub/plugins/models"
+    def destDir         = "${pluginBase}/${registryId}/${registryVersion}"
+
+    // Unzip the artifact directly into the target directory
+    from zipTree(modelArtifact.archiveFile)
+    into destDir
+
+    doLast {
+        println "✅ Plugin installed to: ${destDir}"
+        println "   Restart datahub-gms for GMS to pick it up."
+        println "   Verify: curl -s http://localhost:8080/config | python -m json.tool"
+    }
+}

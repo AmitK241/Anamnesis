@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anamnesis — Persistent Memory for AI Data Agents</title>
+  <meta name="description" content="Anamnesis is a persistent memory layer for AI data agents built on DataHub. Every schema fix, incident, and agent decision becomes institutional knowledge." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- D3.js v7 — force-directed graph for Memory Constellation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+  <!-- Ambient background -->
+  <div class="bg-grid"></div>
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="logo-text">Anamnesis</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-item" data-view="memories" id="nav-memories">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Memory Store
+      </a>
+      <a href="#" class="nav-item" data-view="detect" id="nav-detect">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Detect & Diagnose
+      </a>
+      <a href="#" class="nav-item" data-view="timeline" id="nav-timeline">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Timeline
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="health-indicator" id="health-indicator">
+        <div class="health-dot" id="health-dot"></div>
+        <span id="health-text">Connecting…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="page-title">Dashboard</h1>
+        <p class="page-subtitle" id="page-subtitle">Institutional memory at a glance</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-ghost" id="refresh-btn" title="Refresh data">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Refresh
+        </button>
+        <button class="btn btn-ghost" id="add-memory-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Add Memory
+        </button>
+      </div>
+    </header>
+
+    <!-- Views -->
+    <div class="view active" id="view-dashboard">
+      <!-- Stats row -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card" id="stat-total">
+          <div class="stat-icon stat-icon-blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-value" id="stat-total-val">—</span>
+            <span class="stat-label">Total Memories</span>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-incidents">
+          <div class="stat-icon stat-icon-red">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-value" id="stat-incidents-val">—</span>
+            <span class="stat-label">Incidents</span>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-schema-fixes">
+          <div class="stat-icon stat-icon-amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-value" id="stat-schema-val">—</span>
+            <span class="stat-label">Schema Fixes</span>
+          </div>
+        </div>
+        <div class="stat-card" id="stat-resolved">
+          <div class="stat-icon stat-icon-green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-value" id="stat-resolved-val">—</span>
+            <span class="stat-label">Resolved</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory Constellation — full-width graph panel -->
+      <section class="card constellation-card" id="constellation-section">
+        <div class="constellation-header">
+          <div>
+            <h2 class="constellation-title">Memory Constellation</h2>
+            <p class="constellation-subtitle">Every resolved incident becomes a node. Every recall becomes a connection.</p>
+          </div>
+          <div class="constellation-meta" id="constellation-meta">…</div>
+        </div>
+        <div id="memory-graph-container" class="constellation-canvas"></div>
+      </section>
+
+      <!-- Two-column layout -->
+      <div class="dashboard-grid">
+        <!-- Recent memories -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Recent Memories</h2>
+            <button class="btn btn-ghost btn-sm" data-view="memories" id="view-all-btn">View all →</button>
+          </div>
+          <div class="memory-list" id="recent-memories">
+            <div class="skeleton-list">
+              <div class="skeleton-item"></div>
+              <div class="skeleton-item"></div>
+              <div class="skeleton-item"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity feed -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">Severity Breakdown</h2>
+          </div>
+          <div class="severity-chart" id="severity-chart">
+            <div class="skeleton-list">
+              <div class="skeleton-item" style="height:32px"></div>
+              <div class="skeleton-item" style="height:32px"></div>
+              <div class="skeleton-item" style="height:32px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memory Store view -->
+    <div class="view" id="view-memories">
+      <div class="card" style="margin-bottom:0">
+        <div class="card-header" style="flex-wrap:wrap;gap:12px">
+          <div class="filter-bar">
+            <div class="search-wrap">
+              <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input type="text" id="mem-search" class="search-input" placeholder="Search memories…" />
+            </div>
+            <select id="mem-type-filter" class="select-input">
+              <option value="">All Types</option>
+              <option value="INCIDENT">Incident</option>
+              <option value="SCHEMA_FIX">Schema Fix</option>
+              <option value="DECISION">Decision</option>
+              <option value="LESSON">Lesson</option>
+            </select>
+            <select id="mem-resolved-filter" class="select-input">
+              <option value="">All Status</option>
+              <option value="false">Open</option>
+              <option value="true">Resolved</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="mem-add-btn">+ Add Memory</button>
+        </div>
+        <div id="memories-table-wrap">
+          <table class="mem-table" id="memories-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Entity</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="memories-tbody">
+              <tr><td colspan="7" class="loading-cell"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detect & Diagnose view -->
+    <div class="view" id="view-detect">
+      <div class="detect-grid">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">🔍 Detect Schema Changes</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Dataset URN</label>
+              <input type="text" id="detect-urn" class="form-input" placeholder="urn:li:dataset:(urn:li:dataPlatform:snowflake,db.table,PROD)" />
+            </div>
+            <div class="form-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="detect-auto-baseline" checked />
+                <span class="toggle-text">Auto-capture baseline on first run</span>
+              </label>
+            </div>
+            <button class="btn btn-ghost" id="detect-btn" style="width:100%">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Run Detection
+            </button>
+          </div>
+          <div id="detect-result" class="result-panel hidden"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">⚡ Diagnose Impact</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Dataset URN</label>
+              <input type="text" id="diagnose-urn" class="form-input" placeholder="urn:li:dataset:(…)" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Schema Diff (JSON)</label>
+              <textarea id="diagnose-diff" class="form-textarea" rows="5" placeholder='{"removed":["currency"],"added":["region"],"type_changes":[]}'></textarea>
+            </div>
+            <button class="btn btn-ghost" id="diagnose-btn" style="width:100%">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Run Diagnosis
+            </button>
+          </div>
+          <div id="diagnose-result" class="result-panel hidden"></div>
+        </div>
+
+        <div class="card detect-combo-card">
+          <div class="card-header">
+            <h2 class="card-title">🚀 One-Shot: Detect + Diagnose</h2>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Dataset URN</label>
+              <input type="text" id="combo-urn" class="form-input" placeholder="urn:li:dataset:(…)" />
+            </div>
+            <button class="btn btn-ghost" id="combo-btn" style="width:100%">
+              Run Full Analysis
+            </button>
+          </div>
+          <div id="combo-result" class="result-panel hidden"></div>
+        </div>
+
+        <div class="card detect-combo-card" style="grid-column:1/-1">
+          <div class="card-header">
+            <h2 class="card-title">⚡ Full Loop — Detect → Diagnose → Recall → Fix → Write</h2>
+            <span class="badge badge-amber" style="font-size:11px">Demo Mode</span>
+          </div>
+          <div class="form-body">
+            <div class="form-group">
+              <label class="form-label">Dataset URN</label>
+              <input type="text" id="fullloop-urn" class="form-input"
+                placeholder="urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD)" />
+            </div>
+            <div class="form-group">
+              <label class="toggle-label">
+                <input type="checkbox" id="fullloop-simulate" checked />
+                <span class="toggle-text">Simulate break (demo mode — uses seeded break scenario)</span>
+              </label>
+            </div>
+            <button class="btn btn-primary" id="fullloop-btn" style="width:100%">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Run Full Pipeline Loop
+            </button>
+          </div>
+          <div id="fullloop-result" class="fullloop-result-panel">
+            <!-- Skeleton pipeline tracker — visible before first run -->
+            <div class="pipeline-track pipeline-track-skeleton">
+              <div class="pipeline-track-stage" id="stage-detect">
+                <div class="pipeline-dot"></div>
+                <span class="pipeline-track-label">Detect</span>
+                <span class="pipeline-track-detail">—</span>
+              </div>
+              <div class="pipeline-track-stage" id="stage-diagnose">
+                <div class="pipeline-dot"></div>
+                <span class="pipeline-track-label">Diagnose</span>
+                <span class="pipeline-track-detail">—</span>
+              </div>
+              <div class="pipeline-track-stage" id="stage-recall">
+                <div class="pipeline-dot"></div>
+                <span class="pipeline-track-label">Recall</span>
+                <span class="pipeline-track-detail">—</span>
+              </div>
+              <div class="pipeline-track-stage" id="stage-fix">
+                <div class="pipeline-dot"></div>
+                <span class="pipeline-track-label">Fix</span>
+                <span class="pipeline-track-detail">—</span>
+              </div>
+              <div class="pipeline-track-stage" id="stage-write">
+                <div class="pipeline-dot"></div>
+                <span class="pipeline-track-label">Write</span>
+                <span class="pipeline-track-detail">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline view -->
+    <div class="view" id="view-timeline">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Memory Timeline</h2>
+          <span class="badge badge-blue" id="timeline-count">0 records</span>
+        </div>
+        <div class="timeline" id="timeline-list">
+          <div class="loading-cell"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Memory Modal -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" id="modal-add-memory">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Memory Record</h3>
+        <button class="modal-close" id="modal-close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select id="mem-type" class="form-input">
+              <option value="INCIDENT">Incident</option>
+              <option value="SCHEMA_FIX">Schema Fix</option>
+              <option value="DECISION">Decision</option>
+              <option value="LESSON">Lesson</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Severity</label>
+            <select id="mem-severity" class="form-input">
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="CRITICAL">Critical</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Title <span class="required">*</span></label>
+          <input type="text" id="mem-title" class="form-input" placeholder="Short, descriptive title" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entity URN</label>
+          <input type="text" id="mem-entity-urn" class="form-input" placeholder="urn:li:dataset:(…)" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Summary</label>
+          <textarea id="mem-summary" class="form-textarea" rows="3" placeholder="Describe what happened…"></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tags (comma-separated)</label>
+          <input type="text" id="mem-tags" class="form-input" placeholder="schema, breaking, orders" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+        <button class="btn btn-ghost" id="modal-submit">Save Memory</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail / Delete modal -->
+  <div class="modal-overlay hidden" id="detail-overlay">
+    <div class="modal modal-wide" id="modal-detail">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detail-title">Memory Detail</h3>
+        <button class="modal-close" id="detail-close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="detail-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="detail-resolve-btn">Mark Resolved</button>
+        <button class="btn btn-danger" id="detail-delete-btn">Delete</button>
+        <button class="btn btn-ghost" id="detail-close-btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="memory-graph.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

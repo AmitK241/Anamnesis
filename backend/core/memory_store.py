@@ -85,16 +85,21 @@ class MemoryStore:
     # ── persistence ──────────────────────────────────────────────────────────
 
     def _load(self) -> None:
-        if os.path.exists(self._path):
-            try:
-                with open(self._path, "r", encoding="utf-8") as fh:
-                    raw = json.load(fh)
-                self._records = {
-                    k: MemoryRecord.from_dict(v) for k, v in raw.items()
-                }
-                logger.info("Loaded %d memory records from %s", len(self._records), self._path)
-            except Exception as exc:
-                logger.error("Failed to load memory store: %s", exc)
+        if not os.path.exists(self._path):
+            return
+        try:
+            with open(self._path, "r", encoding="utf-8") as fh:
+                content = fh.read().strip()
+            if not content:
+                logger.debug("Memory store file is empty – starting fresh: %s", self._path)
+                return
+            raw = json.loads(content)
+            self._records = {
+                k: MemoryRecord.from_dict(v) for k, v in raw.items()
+            }
+            logger.info("Loaded %d memory records from %s", len(self._records), self._path)
+        except Exception as exc:
+            logger.error("Failed to load memory store: %s", exc)
 
     def _save(self) -> None:
         try:
