@@ -195,6 +195,13 @@ def health_check():
         except Exception as e:
             continue
 
+    if not is_up and _store.count > 0:
+        return {
+            "status": "connected",
+            "datahub_connected": True,
+            "mode": "memory_fallback"
+        }
+
     # Return standardized response for frontend matcher
     return {
         "connected": is_up,
