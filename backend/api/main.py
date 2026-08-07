@@ -57,19 +57,12 @@ from backend.agents.recall import MemoryRecallAgent
 from backend.core.datahub_client import DataHubAdapter
 from backend.core.memory_store import MemoryRecord, MemoryStore, MemoryType, get_store
 
+os.environ["OMP_NUM_THREADS"] = "1"
+
 @asynccontextmanager
 async def lifespan(app_: FastAPI):
-    """Pre-warm the sentence-transformer model at startup so the first
-    /api/recall call returns quickly instead of timing out."""
-    logger.info("[startup] Pre-warming sentence-transformer embedding model…")
-    try:
-        from backend.core.embeddings import _get_model
-        _get_model()  # loads & caches model in the worker process
-        logger.info("[startup] Embedding model ready.")
-    except Exception as exc:
-        logger.warning("[startup] Could not pre-warm embedding model: %s", exc)
+    """Lifecycle hooks (currently empty)."""
     yield
-    # (shutdown hook – nothing needed)
 
 
 app = FastAPI(
