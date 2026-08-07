@@ -33,6 +33,7 @@ from __future__ import annotations
 import logging
 import os
 import pathlib
+import urllib.request
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
@@ -183,14 +184,30 @@ class FullLoopRequest(BaseModel):
 
 # ── routes ────────────────────────────────────────────────────────────────────
 
+@app.get("/api/health")
+@app.get("/api/status")
 @app.get("/health")
-def health():
-    dh_ok = _dh.health()
+def health_check():
+    # Try 127.0.0.1 first, then localhost fallback
+    urls = ["http://127.0.0.1:8080/health", "http://localhost:8080/health"]
+    is_up = False
+    
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                if resp.status == 200:
+                    is_up = True
+                    break
+        except Exception as e:
+            continue
+
+    # Return standardized response for frontend matcher
     return {
-        "status": "ok" if dh_ok else "degraded",
-        "datahub_connected": dh_ok,
-        "memory_records": _store.count,
-        "datahub_server": _dh.server,
+        "connected": is_up,
+        "status": "connected" if is_up else "offline",
+        "datahub": "UP" if is_up else "DOWN",
+        "message": "DataHub GMS active" if is_up else "DataHub GMS offline"
     }
 
 
@@ -618,51 +635,39 @@ def full_loop(body: FullLoopRequest):
 
 
 @app.get("/api/incidents")
+@app.get("/api/graph")
+@app.get("/api/constellation")
 def get_incidents_graph():
     """
     Returns the Memory Constellation graph — all IncidentMemory records from
     DataHub as force-directed graph nodes + edges derived from their stored
     embedding vectors (cosine similarity, same math as the recall agent).
-
-    Filters out __WIPED__ / empty sentinel records automatically via
-    scroll_incident_memories() — they never appear as graph nodes.
-
-    Response shape::
-
-        {
-          "nodes": [
-            {
-              "id": "INC-...",
-              "dataset": "orders",
-              "dataset_urn": "urn:li:dataset:...",
-              "timestamp_ms": 1785477232503
-            },
-            ...
-          ],
-          "edges": [
-            {
-              "source": "INC-...",
-              "target": "INC-...",
-              "similarity": 0.971,
-              "label": "Strong Match"
-            },
-            ...
-          ]
-        }
-
-    Edges are only included when similarity >= 0.70 so weak noise connections
-    don't clutter the graph at hackathon scale.
     """
     import math
+    from backend.core.memory_store import get_store
 
-    records = _dh.scroll_incident_memories()
+    # Read directly from local MemoryStore as primary source
+    store = get_store()
+    # Ensure we use memory store records
+    records = []
+    for rec in store.all():
+        if rec.type.name == "INCIDENT":
+            detail = rec.detail or {}
+            records.append({
+                "incident_id": rec.id,
+                "dataset_urn": rec.entity_urn,
+                "timestamp": rec.created_at * 1000,
+                "embedding_vector": detail.get("embedding_vector", []),
+                "severity": rec.severity,
+                "title": rec.title,
+                "type": rec.type.name
+            })
 
     # ── Build nodes ───────────────────────────────────────────────────────────
     def _dataset_short(urn: str) -> str:
         """Extract the middle table-path segment from a DataHub URN."""
         parts = urn.split(",")
         if len(parts) >= 2:
-            # e.g. "b2fd91.crm_db.customers" → "customers"
             path = parts[1].strip()
             return path.split(".")[-1] if "." in path else path
         return urn
@@ -673,6 +678,9 @@ def get_incidents_graph():
             "dataset":     _dataset_short(r["dataset_urn"]),
             "dataset_urn": r["dataset_urn"],
             "timestamp_ms": r["timestamp"],
+            "severity":    r["severity"],
+            "title":       r["title"],
+            "type":        r["type"]
         }
         for r in records
         if r.get("incident_id")
@@ -716,7 +724,11 @@ def get_incidents_graph():
     # Sort edges strongest-first for stable rendering
     edges.sort(key=lambda e: e["similarity"], reverse=True)
 
-    return {"nodes": nodes, "edges": edges}
+    if not nodes:
+        nodes = []
+        edges = []
+
+    return {"nodes": nodes, "edges": edges, "memories": records, "count": len(records)}
 
 
 # ── Static file serving (frontend dashboard) ─────────────────────────────────

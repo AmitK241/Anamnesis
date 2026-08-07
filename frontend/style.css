@@ -2403,3 +2403,35 @@ canvas {
   z-index: -1 !important;
   pointer-events: none !important;
 }
+
+/* Navbar Single Row Overrides */
+nav.site-nav, header, .navbar-container {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  height: 4rem !important;
+  padding: 0 1.5rem !important;
+  width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+  #health-text {
+    display: none !important;
+  }
+  .site-nav__logo span {
+    display: none !important;
+  }
+  #nav-run-demo-btn {
+    padding: 4px 8px !important;
+  }
+  .site-nav__links {
+    gap: 8px !important;
+  }
+  .site-nav__actions {
+    gap: 8px !important;
+  }
+}

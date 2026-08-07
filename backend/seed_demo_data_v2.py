@@ -143,32 +143,32 @@ INCIDENT_CONFIGS = [
         },
     },
     {
-        "label":    "Incident 6: product_categories (parent_category_id TYPE CHANGED) - Low Severity / Different Pattern",
-        "urn":      "urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.product_categories,PROD)",
+        "label":    "Incident 6: customers (credit_limit TYPE CHANGED) - Low Severity / Different Pattern",
+        "urn":      CUSTOMERS_URN,
         "detection": {
-            "dataset_urn":     "urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.product_categories,PROD)",
+            "dataset_urn":     CUSTOMERS_URN,
             "has_break":       True,
             "severity":        "low",
             "missing_fields":  [],
-            "type_changes":    [{"field": "parent_category_id", "was": "NUMBER", "now": "STRING"}],
+            "type_changes":    [{"field": "credit_limit", "was": "NUMBER", "now": "STRING"}],
             "break_summary":   (
-                "1 type change (parent_category_id: NUMBER -> STRING) in the product_categories table. "
-                "A formatting update caused parent_category_id to be returned as a formatted string."
+                "1 type change (credit_limit: NUMBER -> STRING) in the customers table. "
+                "A formatting update caused credit_limit to be returned as a formatted string."
             ),
         },
     },
     {
-        "label":    "Incident 7: addresses (zipcode TYPE CHANGED) - Low Severity / Matches #6",
-        "urn":      "urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.addresses,PROD)",
+        "label":    "Incident 7: order_items (unit_price TYPE CHANGED) - Low Severity / Matches #6",
+        "urn":      ORDER_ITEMS_URN,
         "detection": {
-            "dataset_urn":     "urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.addresses,PROD)",
+            "dataset_urn":     ORDER_ITEMS_URN,
             "has_break":       True,
             "severity":        "low",
             "missing_fields":  [],
-            "type_changes":    [{"field": "zipcode", "was": "NUMBER", "now": "STRING"}],
+            "type_changes":    [{"field": "unit_price", "was": "NUMBER", "now": "STRING"}],
             "break_summary":   (
-                "1 type change (zipcode: NUMBER -> STRING) in the addresses table. "
-                "Upstream parsing error caused the zipcode field to be cast to a string type."
+                "1 type change (unit_price: NUMBER -> STRING) in the order_items table. "
+                "Upstream parsing error caused the unit_price field to be cast to a string type."
             ),
         },
     },

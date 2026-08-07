@@ -133,11 +133,11 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
       // Point Light
       this.light = new THREE.PointLight('#00F0FF', 0, 10);
-      this.group.add(this.light);
+      // this.group.add(this.light); // Removed per user request
 
       // Halo Sprite
       this.sprite = new THREE.Sprite(haloMat.clone());
-      this.group.add(this.sprite);
+      // this.group.add(this.sprite); // Removed per user request
 
       scene.add(this.group);
       this.reset(ageOffset);
@@ -241,7 +241,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
       
       // Update materials
       this.mesh.material.transparent = true;
-      this.mesh.material.opacity = alpha * 0.30;
+      this.mesh.material.opacity = alpha * 0.20; // Reduced opacity for cleaner wireframe focus
       this.mesh.material.emissiveIntensity = 0.60 * alpha;
       this.edgesMat.opacity = alpha * 0.40;
       
@@ -255,10 +255,11 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
       // Halo is 2.5x the size of the cube
       const haloSz = this.sz * scale * 2.5;
       this.sprite.scale.set(haloSz, haloSz, 1);
-      this.sprite.material.opacity = alpha * 0.25;
+      this.sprite.material.opacity = 0;
+      this.sprite.visible = false;
 
       // Light
-      this.light.intensity = lightIntensity * alpha;
+      this.light.intensity = 0;
     }
   }
 

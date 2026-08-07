@@ -27,7 +27,7 @@
 
   <!-- Site Nav -->
   <nav class="site-nav">
-    <div class="site-nav__logo" onclick="window.location.hash = '#view-dashboard'" style="cursor:pointer;">
+    <div class="site-nav__logo shrink-0" onclick="window.location.hash = '#view-dashboard'" style="cursor:pointer; display:flex; align-items:center; gap:8px; white-space:nowrap;">
       <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Anamnesis logomark">
         <defs>
           <linearGradient id="navCyanBlue" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -48,16 +48,24 @@
       </svg>
       <span>Anamnesis</span>
     </div>
-    <div class="site-nav__links">
-      <a href="#view-detect" class="site-nav__link">Pipeline</a>
-      <a href="#view-memories" class="site-nav__link">Memory</a>
-      <a href="#view-timeline" class="site-nav__link">Incidents</a>
-      <a href="#view-about" class="site-nav__link">About</a>
-      <button class="btn btn-primary" id="nav-run-demo-btn" onclick="window.location.hash = '#view-detect'; setTimeout(() => document.getElementById('fullloop-btn').scrollIntoView(), 100);">Run Demo</button>
+    <div class="site-nav__links" style="display:flex; align-items:center; gap:16px; flex-wrap:nowrap; overflow:hidden;">
+      <a href="#view-detect" class="site-nav__link" style="white-space:nowrap;">Pipeline</a>
+      <a href="#view-memories" class="site-nav__link" style="white-space:nowrap;">Memory</a>
+      <a href="#view-timeline" class="site-nav__link" style="white-space:nowrap;">Incidents</a>
+      <a href="#view-about" class="site-nav__link" style="white-space:nowrap;">About</a>
     </div>
-    <div class="site-nav__status">
-      <span class="health-indicator"><span class="health-dot" id="health-dot"></span><span class="health-text" id="health-text">Checking…</span></span>
-      <button class="btn btn-ghost btn-sm" id="refresh-btn" title="Refresh">
+    <div class="site-nav__actions" style="display:flex; align-items:center; gap:12px; flex-wrap:nowrap; flex-shrink:0;">
+      <!-- Run Demo Button -->
+      <button class="btn btn-primary" id="nav-run-demo-btn" onclick="window.location.hash = '#view-detect'; setTimeout(() => document.getElementById('fullloop-btn').scrollIntoView(), 100);" style="white-space:nowrap; padding:4px 16px; font-size:12px; border-radius:999px;">Run Demo</button>
+
+      <!-- DataHub Status Pill -->
+      <div class="health-indicator" style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; border-radius:999px; background:rgba(15,23,42,0.5); border:1px solid rgba(51,65,85,0.5); box-shadow:0 1px 2px 0 rgba(0,0,0,0.05); transition:all 0.15s ease; white-space:nowrap; flex-shrink:0;" onmouseover="this.style.borderColor='rgba(71,85,105,0.6)'" onmouseout="this.style.borderColor='rgba(51,65,85,0.5)'">
+        <span class="health-dot" id="health-dot" style="flex-shrink:0;"></span>
+        <span class="health-text" id="health-text" style="font-family:var(--font-primary); font-size:12px; font-weight:500; letter-spacing:normal; color:#e2e8f0;">Checking…</span>
+      </div>
+
+      <!-- Refresh Button -->
+      <button class="btn btn-ghost btn-sm" id="refresh-btn" title="Refresh" style="flex-shrink:0; padding:6px; background:rgba(15,23,42,0.5); border:1px solid rgba(30,41,59,1); border-radius:8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>

@@ -83,7 +83,7 @@ class DataHubAdapter:
             headers=headers,
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=2) as resp:
             return json.loads(resp.read())
 
     # ── search ────────────────────────────────────────────────────────────────
@@ -437,7 +437,7 @@ class DataHubAdapter:
             url = f"{self.server}/aspects/{encoded}?aspect=incidentMemory&version=0"
             try:
                 req = urllib.request.Request(url, headers=headers)
-                with urllib.request.urlopen(req, timeout=10) as resp:
+                with urllib.request.urlopen(req, timeout=2) as resp:
                     raw = json.loads(resp.read())
 
                 # Unwrap the aspect value (same pattern as verify_incident_memory.py)
@@ -480,6 +480,31 @@ class DataHubAdapter:
                 # 404 means no aspect on this dataset — silently skip
                 if "404" not in str(exc):
                     logger.debug("Could not fetch incidentMemory for %s: %s", urn, exc)
+
+        # ── Strategy 4: Local memory_store.json fallback ──────────────────────
+        # Since DataHub GMS is unstable, augment/fallback with local store
+        try:
+            from backend.core.memory_store import get_store
+            store = get_store()
+            local_ids = {r["incident_id"] for r in records}
+            for rec in store.all():
+                if rec.type.name == "INCIDENT" and rec.id not in local_ids:
+                    detail = rec.detail or {}
+                    vec = detail.get("embedding_vector", [])
+                    if vec:
+                        records.append({
+                            "dataset_urn":          rec.entity_urn,
+                            "incident_id":          rec.id,
+                            "root_cause":           rec.summary,
+                            "embedding_vector":     vec,
+                            "resolution_code_diff": detail.get("suggested_fix", ""),
+                            "time_saved_estimate":  detail.get("time_saved_estimate", 0),
+                            "downstream_impact":    detail.get("downstream_impact", []),
+                            "timestamp":            detail.get("timestamp", 0),
+                        })
+                        local_ids.add(rec.id)
+        except Exception as exc:
+            logger.warning("Local memory_store fallback failed: %s", exc)
 
         logger.info("scroll_incident_memories: loaded %d record(s)", len(records))
         return records

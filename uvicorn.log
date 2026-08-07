@@ -1,0 +1,75 @@
+2026-08-07 20:11:05,359 INFO backend.core.memory_store Loaded 0 memory records from D:\Anamnesis\backend\core\..\..\memory_store.json
+2026-08-07 20:11:06,889 INFO backend.core.datahub_client DataHubClient SDK connected to http://localhost:8080
+2026-08-07 20:11:06,889 INFO backend.agents.fixer FixerAgent: model=llama-3.1-8b-instant  temperature=0.30  threshold=0.85
+2026-08-07 20:11:06,914 INFO backend.api.main Frontend mounted from D:\Anamnesis\frontend at /
+INFO:     Started server process [23432]
+INFO:     Waiting for application startup.
+2026-08-07 20:11:06,916 INFO backend.api.main [startup] Pre-warming sentence-transformer embedding model…
+2026-08-07 20:11:17,969 INFO backend.core.embeddings Loading sentence-transformer model 'all-MiniLM-L6-v2'…
+2026-08-07 20:11:17,976 INFO sentence_transformers.SentenceTransformer Use pytorch device_name: cpu
+2026-08-07 20:11:17,977 INFO sentence_transformers.SentenceTransformer Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-08-07 20:11:29,749 INFO backend.core.embeddings Model loaded successfully.
+2026-08-07 20:11:29,749 INFO backend.api.main [startup] Embedding model ready.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:64435 - "GET /api/health HTTP/1.1" 200 OK
+2026-08-07 20:11:30,460 INFO backend.agents.detector simulate_schema_break called for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD)
+2026-08-07 20:11:45,503 ERROR backend.core.datahub_client get_schema failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD): timed out
+2026-08-07 20:11:45,503 WARNING backend.agents.detector simulate_schema_break: live schema empty for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD) – using built-in fallback schema
+2026-08-07 20:11:45,503 INFO backend.agents.detector detect_schema_break called for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD)
+2026-08-07 20:12:00,520 ERROR backend.core.datahub_client get_schema failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD): timed out
+2026-08-07 20:12:00,520 INFO backend.agents.detector detect_schema_break result for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD): has_break=True, missing=['customer_id', 'estimated_delivery_days', 'fulfillment_status', 'order_date', 'order_id', 'order_status', 'order_total', 'payment_method_code'], type_changes=[], new=[]
+2026-08-07 20:12:00,520 INFO backend.agents.diagnoser Diagnoser: new-style diagnosis for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD)
+2026-08-07 20:12:15,551 ERROR backend.core.datahub_client get_lineage_scroll failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD): timed out
+2026-08-07 20:12:30,569 ERROR backend.core.datahub_client get_lineage_scroll failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD): timed out
+2026-08-07 20:12:30,569 INFO backend.agents.recall MemoryRecallAgent: embedding query diagnosis for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD) (missing=8, type_changes=0)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 10.87it/s]
+2026-08-07 20:13:00,680 WARNING backend.core.datahub_client scroll_incident_memories: broad scan failed: timed out
+2026-08-07 20:13:00,680 INFO backend.agents.recall MemoryRecallAgent: 0 past incident(s) loaded from DataHub
+2026-08-07 20:13:00,680 INFO backend.agents.fixer FixerAgent: mode=generated_fresh (no high-similarity past incident found)
+2026-08-07 20:13:01,530 INFO backend.agents.fixer FixerAgent: calling Groq API (model=llama-3.1-8b-instant, temp=0.30, prompt_len=1812 chars)
+2026-08-07 20:13:03,066 INFO backend.agents.fixer FixerAgent: received response (2103 chars) from Groq
+2026-08-07 20:13:03,067 INFO backend.agents.memory_writer MemoryWriterAgent: writing INC-1786113783067-79Q627 for dataset urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 19.99it/s]
+2026-08-07 20:13:03,121 INFO backend.agents.memory_writer MemoryWriterAgent: embedding computed (dim=384)
+2026-08-07 20:13:30,477 INFO backend.agents.detector simulate_schema_break called for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD)
+2026-08-07 20:13:33,132 ERROR backend.agents.memory_writer MemoryWriterAgent: MCP emit failed: timed out
+2026-08-07 20:13:45,480 ERROR backend.core.datahub_client get_schema failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD): timed out
+2026-08-07 20:13:45,480 WARNING backend.agents.detector simulate_schema_break: live schema empty for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD) – using built-in fallback schema
+2026-08-07 20:13:45,480 INFO backend.agents.detector detect_schema_break called for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD)
+2026-08-07 20:14:00,507 ERROR backend.core.datahub_client get_schema failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD): timed out
+2026-08-07 20:14:00,508 INFO backend.agents.detector detect_schema_break result for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD): has_break=True, missing=['customer_id', 'estimated_delivery_days', 'fulfillment_status', 'order_date', 'order_id', 'order_status', 'order_total', 'payment_method_code'], type_changes=[], new=[]
+2026-08-07 20:14:00,508 INFO backend.agents.diagnoser Diagnoser: new-style diagnosis for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD)
+2026-08-07 20:14:15,543 ERROR backend.core.datahub_client get_lineage_scroll failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD): timed out
+2026-08-07 20:14:30,560 ERROR backend.core.datahub_client get_lineage_scroll failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD): timed out
+2026-08-07 20:14:30,561 INFO backend.agents.recall MemoryRecallAgent: embedding query diagnosis for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD) (missing=8, type_changes=0)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 17.12it/s]
+2026-08-07 20:15:00,648 WARNING backend.core.datahub_client scroll_incident_memories: broad scan failed: timed out
+2026-08-07 20:15:00,648 INFO backend.agents.recall MemoryRecallAgent: 0 past incident(s) loaded from DataHub
+2026-08-07 20:15:00,648 INFO backend.agents.fixer FixerAgent: mode=generated_fresh (no high-similarity past incident found)
+2026-08-07 20:15:00,979 INFO backend.agents.fixer FixerAgent: calling Groq API (model=llama-3.1-8b-instant, temp=0.30, prompt_len=1795 chars)
+2026-08-07 20:15:02,120 INFO backend.agents.fixer FixerAgent: received response (1471 chars) from Groq
+2026-08-07 20:15:02,121 INFO backend.agents.memory_writer MemoryWriterAgent: writing INC-1786113902121-UUZIPY for dataset urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.crm_db.customers,PROD)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 32.82it/s]
+2026-08-07 20:15:02,154 INFO backend.agents.memory_writer MemoryWriterAgent: embedding computed (dim=384)
+2026-08-07 20:15:30,505 INFO backend.agents.detector simulate_schema_break called for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD)
+2026-08-07 20:15:32,163 ERROR backend.agents.memory_writer MemoryWriterAgent: MCP emit failed: timed out
+2026-08-07 20:15:45,510 ERROR backend.core.datahub_client get_schema failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD): timed out
+2026-08-07 20:15:45,510 WARNING backend.agents.detector simulate_schema_break: live schema empty for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD) – using built-in fallback schema
+2026-08-07 20:15:45,511 INFO backend.agents.detector detect_schema_break called for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD)
+2026-08-07 20:16:00,514 ERROR backend.core.datahub_client get_schema failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD): timed out
+2026-08-07 20:16:00,514 INFO backend.agents.detector detect_schema_break result for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD): has_break=True, missing=['customer_id', 'estimated_delivery_days', 'fulfillment_status', 'order_date', 'order_id', 'order_status', 'order_total', 'payment_method_code'], type_changes=[], new=[]
+2026-08-07 20:16:00,514 INFO backend.agents.diagnoser Diagnoser: new-style diagnosis for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD)
+2026-08-07 20:16:15,542 ERROR backend.core.datahub_client get_lineage_scroll failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD): timed out
+2026-08-07 20:16:30,571 ERROR backend.core.datahub_client get_lineage_scroll failed for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD): timed out
+2026-08-07 20:16:30,571 INFO backend.agents.recall MemoryRecallAgent: embedding query diagnosis for urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD) (missing=8, type_changes=0)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 16.04it/s]
+2026-08-07 20:17:00,682 WARNING backend.core.datahub_client scroll_incident_memories: broad scan failed: timed out
+2026-08-07 20:17:00,682 INFO backend.agents.recall MemoryRecallAgent: 0 past incident(s) loaded from DataHub
+2026-08-07 20:17:00,683 INFO backend.agents.fixer FixerAgent: mode=generated_fresh (no high-similarity past incident found)
+2026-08-07 20:17:00,994 INFO backend.agents.fixer FixerAgent: calling Groq API (model=llama-3.1-8b-instant, temp=0.30, prompt_len=1814 chars)
+2026-08-07 20:17:02,405 INFO backend.agents.fixer FixerAgent: received response (2018 chars) from Groq
+2026-08-07 20:17:02,405 INFO backend.agents.memory_writer MemoryWriterAgent: writing INC-1786114022405-2W625D for dataset urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.products,PROD)
+Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 22.00it/s]
+2026-08-07 20:17:02,454 INFO backend.agents.memory_writer MemoryWriterAgent: embedding computed (dim=384)
+2026-08-07 20:17:32,470 ERROR backend.agents.memory_writer MemoryWriterAgent: MCP emit failed: timed out

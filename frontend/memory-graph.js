@@ -38,12 +38,14 @@ function edgeWidth(sim) {
   return 1 + sim * 3;
 }
 
-/* ─── Node accent color by type / recency ───────────────────────────────── */
+/* ─── Node accent color by severity ───────────────────────────────── */
 function nodeAccent(d, maxTs) {
   if (d.timestamp_ms === maxTs) return '#818cf8'; // newest — indigo
-  if (d.type === 'INCIDENT')   return GC.CRITICAL;
-  if (d.type === 'SCHEMA_FIX') return GC.RELATED;
-  if (d.type === 'DECISION')   return GC.POSSIBLE;
+  const sev = (d.severity || '').toUpperCase();
+  if (sev === 'CRITICAL') return GC.CRITICAL; // Red
+  if (sev === 'HIGH') return GC.RELATED; // Amber
+  if (sev === 'MEDIUM') return '#06b6d4'; // Cyan
+  if (sev === 'LOW') return GC.STRONG; // Emerald
   return GC.NODE_FILL;
 }
 
@@ -107,6 +109,8 @@ function renderMemoryGraph(containerId, graphData) {
     { id: 'glow-indigo', color: '#818cf8', blur: 8, strength: 1.8 },
     { id: 'glow-red',    color: GC.CRITICAL, blur: 7, strength: 1.6 },
     { id: 'glow-amber',  color: GC.RELATED,  blur: 7, strength: 1.6 },
+    { id: 'glow-cyan',   color: '#06b6d4', blur: 7, strength: 1.6 },
+    { id: 'glow-emerald',color: GC.STRONG, blur: 7, strength: 1.6 },
     { id: 'glow-blue',   color: GC.POSSIBLE, blur: 7, strength: 1.6 },
     { id: 'glow-default',color: '#818cf8',   blur: 5, strength: 1.3 },
   ];
@@ -250,9 +254,11 @@ function renderMemoryGraph(containerId, graphData) {
   // ── Helper: pick the right idle glow filter per node ─────────────
   function nodeGlowFilter(d) {
     if (d.timestamp_ms === maxTs) return 'url(#glow-indigo)';
-    if (d.type === 'INCIDENT')   return 'url(#glow-red)';
-    if (d.type === 'SCHEMA_FIX') return 'url(#glow-amber)';
-    if (d.type === 'DECISION')   return 'url(#glow-blue)';
+    const sev = (d.severity || '').toUpperCase();
+    if (sev === 'CRITICAL') return 'url(#glow-red)';
+    if (sev === 'HIGH') return 'url(#glow-amber)';
+    if (sev === 'MEDIUM') return 'url(#glow-cyan)';
+    if (sev === 'LOW') return 'url(#glow-emerald)';
     return 'url(#glow-default)';
   }
 
@@ -408,7 +414,7 @@ function renderMemoryGraph(containerId, graphData) {
       .html(`
         <div style="color:${nodeAccent(d, maxTs)};font-weight:600;margin-bottom:4px">${d.id || '—'}</div>
         <div style="color:${GC.SMOKE}">${d.dataset_urn || d.dataset || '—'}</div>
-        ${d.type ? `<div style="margin-top:4px;color:#818cf8;font-size:10px">${d.type}</div>` : ''}
+        ${d.title ? `<div style="margin-top:4px;color:#818cf8;font-size:10px">${d.title}</div>` : ''}
       `)
       .style('opacity', '1');
   });

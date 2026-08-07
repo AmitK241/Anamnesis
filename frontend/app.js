@@ -56,25 +56,39 @@ async function apiFetch(path, opts = {}) {
 }
 
 /* ─── Health check ─── */
-async function checkHealth() {
-  const dot = $('health-dot');
-  const txt = $('health-text');
+async function checkDataHubStatus() {
   try {
-    const data = await apiFetch('/health');
-    if (data.status === 'ok') {
-      if (dot) dot.className = 'health-dot ok';
-      if (txt) txt.textContent = `DataHub connected`;
-    } else {
-      if (dot) dot.className = 'health-dot warn';
-      if (txt) txt.textContent = 'DataHub offline';
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    
+    // Adjusted selector to also catch the existing #health-text elements
+    const statusTextEl = document.querySelector('#health-text, #datahub-status-text, .datahub-status-text, [data-datahub-status]');
+    const statusDotEl = document.querySelector('#health-dot, #datahub-status-dot, .datahub-status-dot, span.rounded-full');
+
+    const isConnected = data.connected === true || data.status === 'connected';
+
+    if (statusTextEl) {
+      statusTextEl.textContent = isConnected ? 'DataHub connected' : 'DataHub offline';
+      statusTextEl.className = 'health-text';
+      statusTextEl.style.cssText = 'font-family: var(--font-primary); font-size: 0.75rem; font-weight: 500; letter-spacing: normal; color: #e2e8f0; white-space: nowrap;';
     }
-    return data;
-  } catch {
-    if (dot) dot.className = 'health-dot bad';
-    if (txt) txt.textContent = 'API offline';
-    return null;
+    
+    if (statusDotEl) {
+      statusDotEl.className = 'health-dot';
+      if (isConnected) {
+        statusDotEl.style.cssText = 'background-color: #34d399; box-shadow: 0 0 8px #34d399; width: 0.5rem; height: 0.5rem; border-radius: 9999px; display: inline-block;';
+      } else {
+        statusDotEl.style.cssText = 'background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; width: 0.5rem; height: 0.5rem; border-radius: 9999px; display: inline-block;';
+      }
+    }
+  } catch (err) {
+    console.warn("Status check warning:", err);
   }
 }
+
+// Trigger immediately on load and on refresh button click
+document.addEventListener('DOMContentLoaded', checkDataHubStatus);
+document.querySelector('#refresh-status-btn, button[title*="Refresh"]')?.addEventListener('click', checkDataHubStatus);
 
 /* ─── Helpers ─── */
 function formatDate(ts) {
@@ -1089,7 +1103,7 @@ $('refresh-btn')?.addEventListener('click', () => {
   if (svg) svg.style.animation = 'spin 0.7s linear infinite';
   refresh();
   refreshStats(); // Stat cards update regardless of active view
-  checkHealth();
+  checkDataHubStatus();
   setTimeout(() => { const s = $('refresh-btn')?.querySelector('svg'); if (s) s.style.animation = ''; }, 800);
 });
 
@@ -1109,8 +1123,8 @@ document.addEventListener('keydown', e => {
 
 /* ─── Init ─── */
 (async function init() {
-  await checkHealth();
+  await checkDataHubStatus();
   loadDashboard();          // also triggers refreshMemoryGraph internally
-  setInterval(checkHealth, 30_000);
+  setInterval(checkDataHubStatus, 30_000);
 })();
 
