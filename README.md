@@ -1,256 +1,206 @@
-# Anamnesis 🧠
+# Anamnesis
 
-> **A persistent memory layer for AI data agents, built on DataHub.**
->
-> Every schema fix, every incident resolution, every agent decision becomes
-> institutional memory that future agents can query and reason over.
+**A persistent memory layer for AI data agents, built on DataHub.**
 
-Built for the **DataHub Agent Hackathon 2026**.
+Every schema fix, every incident resolution, every agent decision becomes
+institutional memory that future agents can query and reason over — instead
+of every AI agent reasoning from zero, every time.
+
+Built for [Build with DataHub: The Agent Hackathon](https://datahubproject.io) — 2026.
 
 ---
 
 ## The Problem
 
-AI data agents suffer from institutional amnesia. Every time a schema breaks, an agent:
-1. Re-investigates the same root cause from scratch
-2. Misses the fix that worked last time
-3. Wastes engineering hours on solved problems
+Every data team has felt this: a schema breaks, an engineer spends time tracing
+the root cause through lineage, writes a fix — and that knowledge dies with the
+conversation. Two months later, a different engineer (or AI agent) hits the same
+class of problem and starts from zero again.
 
-Anamnesis solves this by giving agents **persistent, queryable memory**.
+AI agents built on top of today's data stacks inherit this same amnesia. Without
+persistent memory, every agent run reasons in isolation, with no access to what
+was learned from the last hundred times this exact problem occurred.
 
----
+## The Solution
+
+Anamnesis is a 5-stage agent pipeline that turns every resolved data incident
+into searchable, structured memory — written back directly into DataHub's graph:
+
+1. **Detect** — watches DataHub for real schema changes against a captured baseline
+2. **Diagnose** — traces the live DataHub lineage graph to find every downstream
+   dataset, dashboard, and model actually affected
+3. **Recall** — searches vector-embedded past incidents for genuinely similar
+   breaks, ranked by real semantic similarity
+4. **Fix** — generates a resolution from scratch when memory is empty, or adapts
+   a prior fix instantly when a strong match exists
+5. **Write** — persists the resolved incident back to DataHub as a structured
+   `IncidentMemory` object — read-back verified, not just claimed
+
+The result: the first time a problem occurs, the agent reasons from scratch.
+The second time a similar problem occurs — anywhere in the org, on any dataset —
+the agent recognizes it and resolves it in seconds, not minutes.
+
+## Demo
+
+[TO BE FILLED: Link to demo video — under 3 minutes]
+
+[TO BE FILLED: Link to live/hosted demo if available, or clear local-setup pointer below]
+
+### What you'll see in the demo:
+- Incident 1: a schema break on `orders`, resolved from scratch (no prior memory)
+- Incident 2: a related break on `customers`, instantly recalled from Incident 1's
+  resolution (90.7% similarity — Strong Match)
+- Incident 3: a different-pattern break on `products`, correctly recognized as
+  related-but-distinct (87.7% and 84.5% similarities — Related Match)
+- The Memory Constellation: a live, force-directed graph of every incident and
+  its recall relationships, growing in real time as new incidents are resolved
+
+## Understanding the Dashboard
+
+The 4 stat cards on the Dashboard give an at-a-glance health snapshot of the
+memory graph:
+
+| Card | What it counts |
+|---|---|
+| **Total Memories** | Every record stored in DataHub's memory graph so far — the full count, regardless of type. |
+| **Incidents** | Of those, how many are genuine resolved problems (`type = INCIDENT`) — schema breaks the pipeline actually diagnosed and fixed, as opposed to other record types like baseline captures. |
+| **Schema Fixes** | Of those, how many carry the more specific `SCHEMA_FIX` tag — a narrower classification than a generic incident. This can legitimately read `0` if no record has been given that precise tag yet; it reflects real data state, not a bug. |
+| **Resolved** | Of all records (any type), how many have been marked `RESOLVED` via the Memory view's status toggle — independent of category, this tracks whether the underlying issue was closed out. |
+
+Each card is clickable and navigates to a filtered view of the Memory list
+showing exactly the records it counted.
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                     Anamnesis Stack                      │
-│                                                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────┐  │
-│  │ Detector │→ │Diagnoser │→ │  Recall  │→ │ Fixer  │  │
-│  └──────────┘  └──────────┘  └──────────┘  └────────┘  │
-│       ↓              ↓              ↓            ↓       │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │              Memory Store (JSON)                  │   │
-│  │   INCIDENT | SCHEMA_FIX | DECISION | LESSON      │   │
-│  └──────────────────────────────────────────────────┘   │
-│                         ↕                                │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │        DataHub GMS (lineage + schema source)      │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+```text
+┌─────────────┐   ┌──────────────┐   ┌───────────────┐   ┌─────────┐   ┌──────────────┐
+│  detector.py│──▶│ diagnoser.py │──▶│   recall.py   │──▶│ fixer.py│──▶│memory_writer.py│
+│    Agent    │   │    Agent     │   │     Agent     │   │  Agent  │   │    Agent     │
+└─────────────┘   └──────────────┘   └───────────────┘   └─────────┘   └──────────────┘
+       │                  │                   │                              │
+       ▼                  ▼                   ▼                              ▼
+              DataHub MCP Server — lineage, schema, vector search, write-back
+                              │
+                              ▼
+                    DataHub Graph (IncidentMemory)
 ```
 
-### Agent Pipeline
+Every stage reads and/or writes through DataHub's MCP Server:
+- **Read**: schema snapshots, lineage traversal, vector-indexed similarity search
+- **Write**: a custom `IncidentMemory` structured object persisted back to the
+  graph after every resolution, so the knowledge compounds with every run
 
-| Agent | Role | Output |
-|-------|------|--------|
-| **SchemaDetector** | Compares current schema vs. baseline; detects missing fields, type changes, and new additions | `has_break`, `missing_fields`, `type_changes`, `severity` |
-| **Diagnoser** | Traverses DataHub lineage to find upstream sources + downstream consumers; searches memory for past fixes | `root_cause`, `downstream_impact`, `diagnosis_confidence` |
-| **MemoryRecallAgent** | Embeds the diagnosis into a vector (all-MiniLM-L6-v2) and finds semantically similar past incidents via cosine similarity | `matches[]` with `similarity_score` |
-| **FixerAgent** | If a high-similarity past incident is found (≥85%), adapts its fix; otherwise generates a fresh fix via Groq LLM | `suggested_fix`, `mode`, `estimated_time_saved_minutes` |
+## Tech Stack
 
----
+- Backend: FastAPI, Python 3.10+
+- Agent orchestration: LangChain / LangGraph
+- LLM: Groq LLaMA
+- Embeddings: Sentence-Transformers (sentence-transformers>=3.0.0, numpy>=1.24.0)
+- Data platform: DataHub (MCP Server, Agent Context Kit - acryl-datahub)
+- Frontend: Vanilla JS, Three.js, D3.js
 
-## Quick Start
+## Setup
 
 ### Prerequisites
-
+- Docker Desktop (for local DataHub) — see [DataHub docs](https://docs.datahub.com)
 - Python 3.10+
-- DataHub running locally (optional — simulation mode works without it)
-- `GROQ_API_KEY` in `.env` (for the Fixer agent LLM calls)
 
-### Install
-
+### 1. Clone and install
 ```bash
-git clone https://github.com/<you>/anamnesis.git
-cd anamnesis
-
-# Create venv and install dependencies
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # Linux/Mac
-
+git clone https://github.com/AmitK241/Anamnesis.git
+cd Anamnesis
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r backend/requirements.txt
 ```
 
-### Configure
-
+### 2. Start DataHub locally
 ```bash
-# Create .env in project root
-echo GROQ_API_KEY=gsk_your_key_here > .env
-echo DATAHUB_GMS_SERVER=http://localhost:8080 >> .env
+pip install acryl-datahub
+datahub docker quickstart
+datahub datapack load showcase-ecommerce
 ```
 
-### Run the API Server
+### 3. Configure environment
+Create `.env` in the project root:
+```
+DATAHUB_GMS_SERVER=http://localhost:8080
+DATAHUB_GMS_TOKEN=<your personal access token from DataHub UI Settings>
+```
 
+### 4. Run the backend
 ```bash
-.venv\Scripts\python -m uvicorn backend.api.main:app --host 0.0.0.0 --port 8888 --reload
+cd backend
+uvicorn api.main:app --reload --port 8888
 ```
 
-### Open the Dashboard
-
-Open `frontend/index.html` in your browser. The UI connects to the API at `http://localhost:8888`.
-
-### Run the Offline Demo
-
-Demonstrates the full memory loop without any DataHub or cloud dependency:
-
+### 5. Run the frontend
 ```bash
-.venv\Scripts\python -m backend.demo_scenario
+cd frontend
+python3 -m http.server 3000
 ```
+*(The frontend runs on `http://localhost:3000`, communicating with the backend on port `8888`)*
 
-Expected output:
-```
-============================================================
-  ANAMNESIS DEMO - Schema Break Memory Loop
-============================================================
-
-[>>] Step 1: Capturing schema baseline for 'orders' dataset...
-   [OK] Baseline captured (5 fields)
-
-[>>] Step 2: Running SchemaDetector (schema break injected)...
-   has_changes : True
-   is_breaking : True
-   diff summary: 1 field(s) removed: ['currency']; 1 field(s) added
-   memory_id   : <uuid>
-
-[>>] Step 3: Running Diagnoser (lineage traversal + memory search)...
-   downstream_count : 2
-   past_fixes_found : 0
-   incident_memory_id: <uuid>
-
-   Remediation Plan:
-      WARNING: 2 downstream consumer(s) affected: revenue_dashboard, orders_monthly
-      CRITICAL: Removed field 'currency' → notify downstream owners.
-      ...
-
-[>>] Step 4: Querying Anamnesis memory...
-   Total records in memory: 3
-
-[>>] Step 5: Marking incident as resolved...
-   [OK] Incident <uuid>... is now resolved=True
-
-============================================================
-  ✅ Anamnesis demo complete – memory layer working!
-============================================================
-```
-
----
-
-## API Reference
-
-The FastAPI server exposes these endpoints (port 8888 by default):
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check + DataHub connectivity |
-| GET | `/api/memories` | List all memory records (filterable) |
-| POST | `/api/memories` | Create a new memory record |
-| PATCH | `/api/memories/{id}` | Update a memory record |
-| DELETE | `/api/memories/{id}` | Delete a memory record |
-| POST | `/api/detect` | Detect schema breaks for a dataset |
-| POST | `/api/diagnose` | Diagnose a detected schema break |
-| POST | `/api/detect-and-diagnose` | Combined one-shot endpoint |
-| POST | `/api/recall` | Find similar past incidents by embedding |
-| POST | `/api/fix` | Generate a fix suggestion via Groq LLM |
-
-Full interactive docs: `http://localhost:8888/docs`
-
----
-
-## Verification Scripts
-
-Run these to verify each agent independently:
-
+### 6. (Optional) Seed the demo scenario
 ```bash
-# Verify SchemaDetector (requires API server + optionally DataHub)
-.venv\Scripts\python backend/verify_detector.py
-
-# Verify Diagnoser
-.venv\Scripts\python backend/verify_diagnoser.py
-
-# Verify Memory Recall (requires DataHub running to seed test aspects)
-.venv\Scripts\python backend/verify_recall.py
-
-# Verify Fixer (requires GROQ_API_KEY)
-.venv\Scripts\python backend/verify_fixer.py
-
-# Verify custom DataHub aspect round-trip (requires DataHub)
-.venv\Scripts\python backend/verify_incident_memory.py
+python -m backend.seed_demo_data
 ```
 
----
+Then open `http://localhost:3000`.
 
 ## Project Structure
 
 ```
-anamnesis/
+Anamnesis/
 ├── backend/
 │   ├── agents/
-│   │   ├── detector.py         # SchemaDetector: change detection
-│   │   ├── diagnoser.py        # Diagnoser: root cause + lineage
-│   │   ├── recall.py           # MemoryRecallAgent: semantic search
-│   │   └── fixer.py            # FixerAgent: LLM-powered fix generation
+│   │   ├── detector.py
+│   │   ├── diagnoser.py
+│   │   ├── fixer.py
+│   │   ├── memory_writer.py
+│   │   └── recall.py
 │   ├── api/
-│   │   └── main.py             # FastAPI application
+│   │   └── main.py
 │   ├── core/
-│   │   ├── datahub_client.py   # DataHub GraphQL/REST adapter
-│   │   ├── memory_store.py     # JSON-backed memory store
-│   │   └── embeddings.py       # Sentence-transformer embedding helpers
-│   ├── demo_scenario.py        # Offline demo (no DataHub needed)
-│   └── requirements.txt
+│   │   ├── datahub_client.py
+│   │   └── memory_store.py
+│   └── seed_demo_data.py
 ├── frontend/
-│   ├── index.html              # Dashboard UI
-│   ├── style.css               # Styles
-│   └── app.js                  # Frontend logic
-├── metadata-models-custom/     # Custom DataHub aspect: incidentMemory
-└── docs/
-    └── demo_urns.md
+│   ├── index.html
+│   ├── app.js
+│   ├── style.css
+│   ├── memory-graph.js
+│   └── cubes-bg.js
+├── docs/
+│   ├── demo_script.md
+│   └── demo_urns.md
+├── examples/
+│   └── sample_schema_diff.json
+└── README.md
 ```
 
----
+## Roadmap
 
-## Custom DataHub Aspect
+This hackathon submission focuses on two memory types (schema-break
+resolution and cross-incident recall) to keep the demo tight and fully
+verified end-to-end. The same `IncidentMemory` framework is designed to
+extend to:
 
-Anamnesis defines a custom `incidentMemory` aspect for DataHub entities:
+- **PR-review memory** — recalling how similar code changes were reviewed
+  and what concerns were raised previously
+- **ML-drift memory** — connecting upstream schema/data changes to
+  downstream model performance degradation, using DataHub's ML lineage
+- **Migration memory** — recalling how similar schema migrations were
+  planned and executed previously
 
-```json
-{
-  "incidentId": "INC-2026-001",
-  "rootCause": "fulfillment_status field dropped from orders table",
-  "downstreamImpact": ["urn:li:dataset:(...)"],
-  "resolutionCodeDiff": "--- a/pipeline.py\n+++ b/pipeline.py\n...",
-  "embeddingVector": [0.023, -0.041, ...],  // 384-dim MiniLM vector
-  "timeSavedEstimate": 120,
-  "timestamp": 1753862400000
-}
-```
-
-This aspect is stored in DataHub alongside the dataset entity, making it queryable via DataHub's existing search and lineage APIs.
-
----
-
-## How Memory Recall Works
-
-1. **Embedding** — When an incident is diagnosed, Anamnesis encodes the root cause + field names into a 384-dimensional vector using `all-MiniLM-L6-v2`
-2. **Storage** — The vector is stored alongside the incident in the `incidentMemory` aspect
-3. **Query** — When a new break occurs, the new diagnosis is embedded and compared to all stored vectors using cosine similarity
-4. **Threshold** — Matches with similarity ≥ 0.85 are used to adapt historical fixes (reducing resolution time)
-5. **Fresh generation** — If no similar incident exists, the Fixer generates a fresh fix via Groq LLM
-
----
-
-## Built With
-
-- [DataHub](https://datahubproject.io/) — Knowledge graph for lineage and metadata
-- [FastAPI](https://fastapi.tiangolo.com/) — REST API layer
-- [Sentence Transformers](https://www.sbert.net/) — `all-MiniLM-L6-v2` for embeddings
-- [Groq](https://groq.com/) — Fast LLM inference for fix generation
-- [LangChain](https://www.langchain.com/) — Agent orchestration
-
----
+The core write-back pattern (structured memory objects persisted to
+DataHub's graph, recalled via vector search) generalizes to any DataHub
+Agent Context Kit workflow, not just schema incidents.
 
 ## License
 
-MIT
+Apache 2.0 — see [LICENSE.md](LICENSE.md)
+
+## Team / Author
+
+Amit Kumar (GitHub: AmitK241)
