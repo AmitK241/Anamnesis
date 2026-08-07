@@ -1,0 +1,17 @@
+{
+  "dataset_urn": "urn:li:dataset:(urn:li:dataPlatform:postgres,b2fd91.order_entry_db.order_entry.orders,PROD)",
+  "changes": {
+    "removed": ["currency", "discount_code"],
+    "added": ["region_id"],
+    "type_changes": [
+      {
+        "field": "amount",
+        "old_type": "FLOAT",
+        "new_type": "STRING"
+      }
+    ]
+  },
+  "severity": "CRITICAL",
+  "diagnosed_cause": "The 'amount' field was cast to STRING and 'currency' was removed, breaking all downstream analytics pipelines relying on monetary aggregations.",
+  "recommended_fix": "Restore the 'currency' column and revert 'amount' to FLOAT in the upstream dbt model."
+}

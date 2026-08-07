@@ -62,6 +62,10 @@ class MemoryRecord:
     def from_dict(cls, data: Dict[str, Any]) -> "MemoryRecord":
         data = dict(data)
         data["type"] = MemoryType(data.get("type", "INCIDENT"))
+        if "created_at" in data:
+            data["created_at"] = float(data["created_at"])
+        if "updated_at" in data:
+            data["updated_at"] = float(data["updated_at"])
         return cls(**data)
 
 
@@ -155,6 +159,7 @@ class MemoryStore:
         limit: int = 50,
     ) -> List[MemoryRecord]:
         """Return memory records matching the given filters, most recent first."""
+        self._load()  # Always read fresh from disk in case external processes modified it
         results = list(self._records.values())
 
         if entity_urn is not None:
@@ -171,6 +176,7 @@ class MemoryStore:
 
     def search(self, keyword: str, limit: int = 20) -> List[MemoryRecord]:
         """Full-text search across title + summary + detail."""
+        self._load()
         kw = keyword.lower()
         results = []
         for rec in self._records.values():
@@ -181,10 +187,12 @@ class MemoryStore:
         return results[:limit]
 
     def all(self) -> List[MemoryRecord]:
+        self._load()
         return sorted(self._records.values(), key=lambda r: r.created_at, reverse=True)
 
     @property
     def count(self) -> int:
+        self._load()
         return len(self._records)
 
 

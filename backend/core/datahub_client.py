@@ -381,50 +381,50 @@ class DataHubAdapter:
                 )
 
         # ── Strategy 3: broad dataset scan ───────────────────────────────
-        # Custom aspects are NOT indexed by DataHub's _exists_ filter, so
-        # Strategy 1 always returns 0 for incidentMemory.  Instead we fetch
-        # all dataset URNs via a plain searchAcrossEntities and probe each
-        # one — the same approach used by scratch_audit.py.
-        if not urns:
-            try:
-                gql_all = """
-                query AllDatasets($count: Int!) {
-                  searchAcrossEntities(input: {
-                    types: [DATASET]
-                    query: "*"
-                    count: $count
-                  }) {
-                    searchResults { entity { urn } }
-                  }
-                }
-                """
-                data_all = self._gql(gql_all, {"count": max_results})
-                all_results = (
-                    data_all.get("data", {})
-                           .get("searchAcrossEntities", {})
-                           .get("searchResults", [])
+        # Custom aspects are NOT reliably indexed by DataHub's _exists_ filter.
+        # If we only rely on Strategy 1, we may miss canonical incidents that
+        # weren't indexed, while picking up __WIPED__ ones that were.
+        # We always fetch all dataset URNs and merge them.
+        try:
+            gql_all = """
+            query AllDatasets($count: Int!) {
+              searchAcrossEntities(input: {
+                types: [DATASET]
+                query: "*"
+                count: $count
+              }) {
+                searchResults { entity { urn } }
+              }
+            }
+            """
+            data_all = self._gql(gql_all, {"count": max_results})
+            all_results = (
+                data_all.get("data", {})
+                       .get("searchAcrossEntities", {})
+                       .get("searchResults", [])
+            )
+            all_urns = [
+                r["entity"]["urn"]
+                for r in all_results
+                if r.get("entity", {}).get("urn")
+            ]
+            if all_urns:
+                logger.info(
+                    "scroll_incident_memories: broad scan — probing %d dataset(s) for "
+                    "incidentMemory aspect",
+                    len(all_urns),
                 )
-                all_urns = [
-                    r["entity"]["urn"]
-                    for r in all_results
-                    if r.get("entity", {}).get("urn")
-                ]
-                if all_urns:
-                    logger.info(
-                        "scroll_incident_memories: broad scan — probing %d dataset(s) for "
-                        "incidentMemory aspect",
-                        len(all_urns),
-                    )
-                    urns = all_urns
-                else:
-                    logger.info(
-                        "scroll_incident_memories: broad scan returned 0 datasets; "
-                        "returning empty list"
-                    )
-                    return []
-            except Exception as exc:
-                logger.warning("scroll_incident_memories: broad scan failed: %s", exc)
-                return []
+                # Merge and deduplicate with any URNs found in Strategy 1/2
+                urns = list(set(urns + all_urns))
+            else:
+                logger.info(
+                    "scroll_incident_memories: broad scan returned 0 datasets; "
+                    "continuing with %d URN(s)", len(urns)
+                )
+        except Exception as exc:
+            logger.warning("scroll_incident_memories: broad scan failed: %s", exc)
+        if not urns:
+            return []
 
         # ── Fetch aspect for each URN ─────────────────────────────────────────
         records: List[Dict[str, Any]] = []

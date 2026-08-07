@@ -62,16 +62,16 @@ async function checkHealth() {
   try {
     const data = await apiFetch('/health');
     if (data.status === 'ok') {
-      dot.className = 'health-dot ok';
-      txt.textContent = `DataHub connected`;
+      if (dot) dot.className = 'health-dot ok';
+      if (txt) txt.textContent = `DataHub connected`;
     } else {
-      dot.className = 'health-dot warn';
-      txt.textContent = 'DataHub offline';
+      if (dot) dot.className = 'health-dot warn';
+      if (txt) txt.textContent = 'DataHub offline';
     }
     return data;
   } catch {
-    dot.className = 'health-dot bad';
-    txt.textContent = 'API offline';
+    if (dot) dot.className = 'health-dot bad';
+    if (txt) txt.textContent = 'API offline';
     return null;
   }
 }
@@ -79,7 +79,8 @@ async function checkHealth() {
 /* ─── Helpers ─── */
 function formatDate(ts) {
   if (!ts) return '—';
-  return new Date(ts * 1000).toLocaleString(undefined, {
+  const d = typeof ts === 'number' ? new Date(ts * 1000) : new Date(ts);
+  return d.toLocaleString(undefined, {
     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
   });
 }
@@ -95,6 +96,8 @@ function typeBadge(type) {
 }
 
 function severityBadge(sev) {
+  if (!sev) sev = 'LOW';
+  sev = sev.toUpperCase();
   const map = {
     CRITICAL: 'badge-red',
     HIGH: 'badge-red',
@@ -115,37 +118,164 @@ function typeColor(type) {
   return map[type] || '#94a3b8';
 }
 
+/* ─── About Page ─── */
+
+const _aboutStages = [
+  { icon: '🔍', name: 'Detect',   desc: 'Watches DataHub for real schema changes against a captured baseline — no polling guesswork, no synthetic triggers.' },
+  { icon: '⚡', name: 'Diagnose', desc: 'Traces the live DataHub lineage graph to find every downstream dataset, dashboard, and model actually affected.' },
+  { icon: '🧠', name: 'Recall',   desc: 'Searches vector-embedded past incidents for genuinely similar breaks — ranked by real semantic similarity, not keyword match.' },
+  { icon: '🔧', name: 'Fix',     desc: 'Generates a resolution from scratch when memory is empty, or adapts a prior fix instantly when a strong match exists.' },
+  { icon: '💾', name: 'Write',    desc: 'Persists the resolved incident back to DataHub as a structured memory object — read-back verified, not just claimed.' },
+];
+
+const SVG_PYTHON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14.25.18l.9.2.73.26.59.3.45.32.34.34.25.34.16.33.1.3.04.26.02.2-.01.13V8.5l-.05.63-.13.55-.21.46-.26.38-.3.31-.33.25-.35.19-.35.14-.33.1-.3.07-.26.04-.21.02H8.77l-.69.05-.59.14-.5.22-.41.27-.33.32-.27.35-.2.36-.15.37-.1.35-.07.32-.04.27-.02.21v3.06H3.17l-.21-.03-.28-.07-.32-.12-.35-.18-.36-.26-.36-.36-.35-.46-.32-.59-.28-.73-.21-.88-.14-1.05-.05-1.23.06-1.22.16-1.04.24-.87.32-.71.36-.57.4-.44.42-.33.42-.24.4-.16.36-.1.32-.05.24-.01h.16l.06.01h8.16v-.83H6.18l-.01-2.75-.02-.37.05-.34.11-.31.17-.28.25-.26.31-.23.38-.2.44-.18.51-.15.58-.12.64-.1.71-.08.77-.04.84-.02 1.27.05zm-6.3 1.98l-.23.14-.18.22-.11.27-.04.3-.02.32.08.31.14.28.21.22.27.15.32.08.34.01.35-.06.32-.13.27-.19.2-.24.12-.29.05-.31-.02-.32-.1-.31-.17-.28-.24-.22-.3-.15-.33-.08-.35-.01-.34.05-.31.13zM9.75 23.82l-.9-.2-.73-.26-.59-.3-.45-.32-.34-.34-.25-.34-.16-.33-.1-.3-.04-.26-.02-.2.01-.13V15.5l.05-.63.13-.55.21-.46.26-.38.3-.31.33-.25.35-.19.35-.14.33-.1.3-.07.26-.04.21-.02h5.82l.69-.05.59-.14.5-.22.41-.27.33-.32.27-.35.2-.36.15-.37.1-.35.07-.32.04-.27.02-.21V8.84h3.5l.21.03.28.07.32.12.35.18.36.26.36.36.35.46.32.59.28.73.21.88.14 1.05.05 1.23-.06 1.22-.16 1.04-.24.87-.32.71-.36.57-.4.44-.42.33-.42.24-.4.16-.36.1-.32.05-.24.01h-.16l-.06-.01h-8.16v.83h7.59l.01 2.75.02.37-.05.34-.11.31-.17.28-.25.26-.31.23-.38.2-.44.18-.51.15-.58.12-.64.1-.71.08-.77.04-.84.02-1.27-.05zm6.3-1.98l.23-.14.18-.22.11-.27.04-.3-.02-.32-.08-.31-.14-.28-.21-.22-.27-.15-.32-.08-.34-.01-.35.06-.32.13-.27.19-.2.24-.12.29-.05.31.02.32.1.31.17.28.24.22.3.15.33.08.35.01.34-.05.31-.13z"/></svg>`;
+const SVG_FASTAPI = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
+const SVG_REACT = `<svg width="14" height="14" viewBox="-11.5 -10.23 23 20.46"><circle cx="0" cy="0" r="2.05" fill="currentColor"/><g stroke="currentColor" stroke-width="1" fill="none"><ellipse rx="11" ry="4.2"/><ellipse rx="11" ry="4.2" transform="rotate(60)"/><ellipse rx="11" ry="4.2" transform="rotate(120)"/></g></svg>`;
+const SVG_DATAHUB = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+const SVG_THREEJS = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 22h20L12 2zM12 2v20M2 22l10-10l10 10"/></svg>`;
+const SVG_DB = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>`;
+const SVG_CODE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+
+const _techStack = [
+  { name: 'Python 3.10+', icon: SVG_PYTHON },
+  { name: 'FastAPI', icon: SVG_FASTAPI },
+  { name: 'Vanilla JS', icon: SVG_REACT },
+  { name: 'DataHub SDK', icon: SVG_DATAHUB },
+  { name: 'Three.js', icon: SVG_THREEJS },
+  { name: 'PostgreSQL', icon: SVG_DB },
+  { name: 'LangGraph', icon: SVG_CODE }
+];
+
+let _aboutRendered = false; // Render once; no need to re-run on every visit
+
+function loadAbout() {
+  if (_aboutRendered) return;
+  _renderAboutStages();
+  _renderTechStack();
+  _aboutRendered = true;
+}
+
+function _renderAboutStages() {
+  const grid = $('about-stage-grid');
+  if (!grid) return;
+  grid.innerHTML = _aboutStages.map((s, i) => `
+    <div class="card about-stage-card card-stagger-in" style="animation-delay: ${0.1 * (i + 1)}s">
+      <div class="about-stage-card__top">
+        <div class="about-stage-card__icon">${s.icon}</div>
+        <div class="about-stage-card__number">STAGE ${String(i + 1).padStart(2, '0')}</div>
+      </div>
+      <div class="about-stage-card__name">${s.name}</div>
+      <div class="about-stage-card__desc">${s.desc}</div>
+    </div>
+  `).join('');
+}
+
+function _renderTechStack() {
+  const row = $('about-chip-row');
+  if (!row) return;
+  row.innerHTML = _techStack.map(t => `<span class="about-chip">${t.icon} ${t.name}</span>`).join('');
+}
+
 /* ─── Navigation ─── */
 function switchView(view) {
   state.currentView = view;
 
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  
+  // Update nav link active states
+  document.querySelectorAll('.site-nav__link').forEach(n => {
+    if (n.getAttribute('href') === `#view-${view}`) {
+      n.classList.add('active');
+    } else {
+      n.classList.remove('active');
+    }
+  });
 
   const viewEl = $(`view-${view}`);
   if (viewEl) viewEl.classList.add('active');
-  const navEl = $(`nav-${view}`);
-  if (navEl) navEl.classList.add('active');
 
   const titles = {
     dashboard: ['Dashboard', 'Institutional memory at a glance'],
     memories: ['Memory Store', 'Browse and search all memory records'],
     detect: ['Detect & Diagnose', 'Run schema detection and impact diagnosis'],
     timeline: ['Timeline', 'Chronological view of all agent memory'],
+    about: ['About', 'How Anamnesis thinks — system architecture'],
   };
   const [title, subtitle] = titles[view] || ['Anamnesis', ''];
-  $('page-title').textContent = title;
-  $('page-subtitle').textContent = subtitle;
+  const titleEl = $('page-title');
+  if (titleEl) titleEl.textContent = title;
+  const subtitleEl = $('page-subtitle');
+  if (subtitleEl) subtitleEl.textContent = subtitle;
 
   if (view === 'memories') loadMemoriesTable();
   if (view === 'timeline') loadTimeline();
   if (view === 'dashboard') loadDashboard();
+  if (view === 'about') loadAbout();
 }
 
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', (e) => {
-    e.preventDefault();
-    switchView(el.dataset.view);
+/* ─── Hash Routing & Swipe Gestures ─── */
+const syncViewFromHash = () => {
+  const hash = window.location.hash || '';
+  if (hash.includes('memories')) switchView('memories');
+  else if (hash.includes('timeline')) switchView('timeline');
+  else if (hash.includes('detect') || hash.includes('pipeline')) switchView('detect');
+  else if (hash.includes('about')) switchView('about');
+  else if (hash.includes('dashboard')) switchView('dashboard');
+  else switchView('dashboard'); // Default root fallback to dashboard
+};
+
+window.addEventListener('hashchange', syncViewFromHash);
+window.addEventListener('popstate', syncViewFromHash);
+window.addEventListener('DOMContentLoaded', syncViewFromHash);
+// Call once on initial script load to catch existing hash
+syncViewFromHash();
+
+const swipeViews = ['detect', 'memories', 'timeline'];
+let swipeCooldown = false;
+
+window.addEventListener('wheel', (e) => {
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 60) {
+    if (swipeCooldown) return;
+    
+    const currentIndex = swipeViews.indexOf(state.currentView);
+    if (currentIndex === -1) return; // Only allow swipe between designated views
+    
+    let nextIndex = currentIndex;
+    
+    if (e.deltaX > 0) {
+      nextIndex = Math.min(currentIndex + 1, swipeViews.length - 1);
+    } else if (e.deltaX < 0) {
+      nextIndex = Math.max(currentIndex - 1, 0);
+    }
+    
+    if (nextIndex !== currentIndex) {
+      swipeCooldown = true;
+      window.location.hash = `#view-${swipeViews[nextIndex]}`;
+      setTimeout(() => { swipeCooldown = false; }, 400);
+    }
+  }
+}, { passive: true });
+
+/* ─── Stat card click → navigate + pre-filter ─── */
+document.querySelectorAll('.stat-card[data-action]').forEach(card => {
+  const activate = () => {
+    const filterType     = card.dataset.filterType     ?? '';
+    const filterResolved = card.dataset.filterResolved ?? '';
+
+    // Pre-set the existing filter controls (these drive loadMemoriesTable() already)
+    const typeEl     = $('mem-type-filter');
+    const resolvedEl = $('mem-resolved-filter');
+    if (typeEl)     typeEl.value     = filterType;
+    if (resolvedEl) resolvedEl.value = filterResolved === 'true' ? 'true' : '';
+
+    // Switch view — loadMemoriesTable() is called inside switchView()
+    switchView(card.dataset.action);
+  };
+
+  card.addEventListener('click', activate);
+  // Keyboard: Enter or Space triggers the same action
+  card.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
   });
 });
 
@@ -180,16 +310,65 @@ async function loadDashboard() {
   }
 }
 
+/**
+ * Refresh ONLY the stat card numbers from /api/memories.
+ * Always runs regardless of which view is currently active.
+ * Called after every state-mutating action (Full Loop, Add Memory,
+ * Toggle Resolved, Delete) so cards never show stale counts.
+ */
+async function refreshStats() {
+  try {
+    const data = await apiFetch('/api/memories?limit=200');
+    const records = data.records || [];
+    const total      = records.length;
+    const incidents  = records.filter(r => r.type === 'INCIDENT').length;
+    const schemaFixes = records.filter(r => r.type === 'SCHEMA_FIX').length;
+    const resolved   = records.filter(r => r.resolved).length;
+    animateNumber('stat-total-val',     total);
+    animateNumber('stat-incidents-val', incidents);
+    animateNumber('stat-schema-val',    schemaFixes);
+    animateNumber('stat-resolved-val',  resolved);
+    // Also refresh the recent-memories list on the dashboard if visible
+    if (state.currentView === 'dashboard') {
+      state.memories = records;
+      renderRecentMemories(records.slice(0, 8));
+      renderSeverityChart(records);
+    }
+  } catch {
+    // Silent — stat refresh is best-effort, don't disrupt the user
+  }
+}
+
 function animateNumber(id, target) {
   const el = $(id);
   if (!el) return;
-  let start = 0;
-  const step = Math.max(1, Math.ceil(target / 20));
-  const interval = setInterval(() => {
-    start = Math.min(start + step, target);
-    el.textContent = start;
-    if (start >= target) clearInterval(interval);
-  }, 30);
+  
+  // If target isn't a valid number, fallback
+  if (typeof target !== 'number' || isNaN(target)) {
+    el.textContent = target;
+    return;
+  }
+  
+  const duration = 1200; // 1.2s smooth count
+  const startTime = performance.now();
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // easeOutQuad easing function
+    const ease = 1 - (1 - progress) * (1 - progress);
+    
+    el.textContent = Math.floor(ease * target);
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      el.textContent = target; // Ensure it ends exactly on the target
+    }
+  }
+  
+  requestAnimationFrame(update);
 }
 
 function renderRecentMemories(records) {
@@ -225,7 +404,10 @@ function renderSeverityChart(records) {
   const sevs = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
   const counts = {};
   sevs.forEach(s => counts[s] = 0);
-  records.forEach(r => { if (counts[r.severity] !== undefined) counts[r.severity]++; });
+  records.forEach(r => { 
+    const s = (r.severity || 'LOW').toUpperCase();
+    if (counts[s] !== undefined) counts[s]++; 
+  });
 
   const max = Math.max(...Object.values(counts), 1);
   container.innerHTML = sevs.map(s => `
@@ -380,6 +562,7 @@ async function toggleResolved(id, currentlyResolved, fromDetail = false) {
     toast(`Marked as ${!currentlyResolved ? 'resolved' : 'open'}`, 'success');
     if (fromDetail) closeDetail();
     refresh();
+    refreshStats(); // Always update stat cards regardless of active view
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -393,6 +576,7 @@ async function deleteMemory(id, fromDetail = false) {
     toast('Memory deleted', 'success');
     if (fromDetail) closeDetail();
     refresh();
+    refreshStats(); // Always update stat cards regardless of active view
   } catch (err) {
     toast(err.message, 'error');
   }
@@ -412,7 +596,6 @@ function openAddModal() {
 
 function closeAddModal() { hide($('modal-overlay')); }
 
-$('add-memory-btn').addEventListener('click', openAddModal);
 $('mem-add-btn')?.addEventListener('click', openAddModal);
 $('modal-close').addEventListener('click', closeAddModal);
 $('modal-cancel').addEventListener('click', closeAddModal);
@@ -438,6 +621,7 @@ $('modal-submit').addEventListener('click', async () => {
     toast('Memory saved ✓', 'success');
     closeAddModal();
     refresh();
+    refreshStats(); // Always update stat cards regardless of active view
   } catch (err) {
     toast(err.message, 'error');
   } finally {
@@ -543,6 +727,7 @@ $('combo-btn').addEventListener('click', async () => {
     panel.className = 'result-panel success';
     toast('Full analysis complete', 'success');
     refresh();
+    refreshStats(); // Update stat cards in case a memory was written
   } catch (err) {
     panel.textContent = err.message;
     panel.className = 'result-panel error';
@@ -838,6 +1023,9 @@ $('fullloop-btn')?.addEventListener('click', async () => {
     refresh();
     // Re-draw constellation so the new incident node appears live
     refreshMemoryGraph('memory-graph-container');
+    // Always update stat cards — Full Loop writes a new memory record
+    // regardless of which view the user is currently on
+    refreshStats();
   } catch (err) {
     resultEl.className = 'result-panel error';
     resultEl.textContent = err.message;
@@ -896,11 +1084,13 @@ function refresh() {
   else if (v === 'timeline') loadTimeline();
 }
 
-$('refresh-btn').addEventListener('click', () => {
-  $('refresh-btn').querySelector('svg').style.animation = 'spin 0.7s linear infinite';
+$('refresh-btn')?.addEventListener('click', () => {
+  const svg = $('refresh-btn')?.querySelector('svg');
+  if (svg) svg.style.animation = 'spin 0.7s linear infinite';
   refresh();
+  refreshStats(); // Stat cards update regardless of active view
   checkHealth();
-  setTimeout(() => $('refresh-btn').querySelector('svg').style.animation = '', 800);
+  setTimeout(() => { const s = $('refresh-btn')?.querySelector('svg'); if (s) s.style.animation = ''; }, 800);
 });
 
 /* ─── Keyboard shortcuts ─── */
@@ -914,6 +1104,8 @@ document.addEventListener('keydown', e => {
     if (state.currentView === 'memories') $('mem-search')?.focus();
   }
 });
+
+
 
 /* ─── Init ─── */
 (async function init() {

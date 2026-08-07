@@ -57,6 +57,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from backend.core.embeddings import embed_incident_text
+from backend.core.memory_store import get_store, MemoryRecord, MemoryType
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +321,34 @@ class MemoryWriterAgent:
 
         # ── 6. Update ANAMNESIS_KNOWN_DATASET_URNS so recall can find the new record ──
         _register_urn(dataset_urn)
+
+        # ── 7. Keep local memory_store.json in sync with DataHub (Option B) ──
+        # Extract severity from diagnosis/detection or default to LOW
+        severity = diagnosis.get("severity") or detection.get("severity") or "low"
+        
+        # Build title from dataset_urn roughly
+        table_name = dataset_urn.split(".")[-1].split(",")[0] if "." in dataset_urn else dataset_urn
+        title = f"Schema break on {table_name}"
+        
+        store = get_store()
+        rec = MemoryRecord(
+            id=incident_id,
+            type=MemoryType.INCIDENT,
+            entity_urn=dataset_urn,
+            title=title,
+            summary=root_cause,
+            detail={
+                "missing_fields": missing_fields,
+                "type_changes": type_changes,
+                "downstream_impact": downstream,
+                "suggested_fix": suggested_fix,
+            },
+            severity=severity.upper(),
+            tags=[table_name],
+            agent_id="anamnesis"
+        )
+        store.add(rec)
+        logger.info("MemoryWriterAgent: Synced incident %s to local memory_store.json", incident_id)
 
         return {
             "success":      True,

@@ -70,7 +70,7 @@ r2 = recall.recall_similar_incidents(
 m2 = r2.get("matches", [])
 if m2:
     # Inc1 should appear in top-3 results with score >= 85% (strong/related match)
-    inc1_matches = [m for m in m2 if m.get("incident_id", "").startswith("INC-1785477232502")]
+    inc1_matches = [m for m in m2 if m.get("incident_id", "").startswith("INC-1785994070974")]
     if inc1_matches:
         inc1 = inc1_matches[0]
         pct = inc1["similarity_score"] * 100
@@ -105,9 +105,9 @@ r3 = recall.recall_similar_incidents(
 )
 m3 = r3.get("matches", [])
 if len(m3) >= 2:
-    m_inc1 = next((m for m in m3 if m.get("incident_id", "").startswith("INC-1785477232502")), None)
-    m_inc2 = next((m for m in m3 if m.get("incident_id", "").startswith("INC-1785609619933")), None)
-    for label_exp, match, exp_pct in [("Inc1", m_inc1, 87.7), ("Inc2", m_inc2, 84.5)]:
+    m_inc1 = next((m for m in m3 if m.get("incident_id", "").startswith("INC-1785994070974")), None)
+    m_inc2 = next((m for m in m3 if m.get("incident_id", "").startswith("INC-1785994074713")), None)
+    for label_exp, match, exp_pct in [("Inc1", m_inc1, 87.7), ("Inc2", m_inc2, 84.4)]:
         if match:
             score = match["similarity_score"]
             pct = score * 100
@@ -140,7 +140,7 @@ r1 = recall.recall_similar_incidents(
         "root_cause": INC1_ROOT,
         "missing_fields": ["order_status"],
         "type_changes": [],
-        "current_incident_id": "INC-1785477232502-25YVG1",
+        "current_incident_id": "INC-1785994070974-95Z8S0",
         "severity": "HIGH",
     },
     top_k=3,

@@ -3,125 +3,150 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Anamnesis — Persistent Memory for AI Data Agents</title>
+  <title>Anamnesis — Institutional Memory for AI Agents</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' stop-color='%230EDDFF'/><stop offset='100%25' stop-color='%230066FF'/></linearGradient><radialGradient id='a' cx='50%25' cy='50%25' r='50%25'><stop offset='0%25' stop-color='%23FFD700'/><stop offset='100%25' stop-color='%23FF4500' stop-opacity='0'/></radialGradient></defs><path d='M32 8 L54 52 L10 52 Z' fill='none' stroke='url(%23g)' stroke-width='4' stroke-linejoin='round'/><line x1='32' y1='8' x2='32' y2='30' stroke='%230EDDFF' stroke-width='2' stroke-dasharray='2 2'/><line x1='10' y1='52' x2='32' y2='30' stroke='%230EDDFF' stroke-width='2'/><line x1='54' y1='52' x2='32' y2='30' stroke='%230EDDFF' stroke-width='2'/><circle cx='32' cy='30' r='7' fill='url(%23a)'/><circle cx='32' cy='30' r='2.5' fill='%23FFFFFF'/></svg>" />
   <meta name="description" content="Anamnesis is a persistent memory layer for AI data agents built on DataHub. Every schema fix, incident, and agent decision becomes institutional knowledge." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <!-- D3.js v7 — force-directed graph for Memory Constellation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- Three.js + Post-Processing -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
 </head>
 <body>
-  <!-- Ambient background -->
-  <div class="bg-grid"></div>
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
 
-  <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <span class="logo-text">Anamnesis</span>
+  <!-- Site Nav -->
+  <nav class="site-nav">
+    <div class="site-nav__logo" onclick="window.location.hash = '#view-dashboard'" style="cursor:pointer;">
+      <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Anamnesis logomark">
+        <defs>
+          <linearGradient id="navCyanBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0EDDFF" />
+            <stop offset="100%" stop-color="#0066FF" />
+          </linearGradient>
+          <radialGradient id="navAmberGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFD700" stop-opacity="1" />
+            <stop offset="100%" stop-color="#FF4500" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <path d="M32 8 L54 52 L10 52 Z" fill="none" stroke="url(#navCyanBlue)" stroke-width="4" stroke-linejoin="round" />
+        <line x1="32" y1="8" x2="32" y2="30" stroke="#0EDDFF" stroke-width="2" stroke-dasharray="2 2" />
+        <line x1="10" y1="52" x2="32" y2="30" stroke="#0EDDFF" stroke-width="2" />
+        <line x1="54" y1="52" x2="32" y2="30" stroke="#0EDDFF" stroke-width="2" />
+        <circle cx="32" cy="30" r="7" fill="url(#navAmberGlow)" />
+        <circle cx="32" cy="30" r="2.5" fill="#FFFFFF" />
+      </svg>
+      <span>Anamnesis</span>
     </div>
-
-    <nav class="sidebar-nav">
-      <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="2"/></svg>
-        Dashboard
-      </a>
-      <a href="#" class="nav-item" data-view="memories" id="nav-memories">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Memory Store
-      </a>
-      <a href="#" class="nav-item" data-view="detect" id="nav-detect">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Detect & Diagnose
-      </a>
-      <a href="#" class="nav-item" data-view="timeline" id="nav-timeline">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Timeline
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="health-indicator" id="health-indicator">
-        <div class="health-dot" id="health-dot"></div>
-        <span id="health-text">Connecting…</span>
-      </div>
+    <div class="site-nav__links">
+      <a href="#view-detect" class="site-nav__link">Pipeline</a>
+      <a href="#view-memories" class="site-nav__link">Memory</a>
+      <a href="#view-timeline" class="site-nav__link">Incidents</a>
+      <a href="#view-about" class="site-nav__link">About</a>
+      <button class="btn btn-primary" id="nav-run-demo-btn" onclick="window.location.hash = '#view-detect'; setTimeout(() => document.getElementById('fullloop-btn').scrollIntoView(), 100);">Run Demo</button>
     </div>
-  </aside>
+    <div class="site-nav__status">
+      <span class="health-indicator"><span class="health-dot" id="health-dot"></span><span class="health-text" id="health-text">Checking…</span></span>
+      <button class="btn btn-ghost btn-sm" id="refresh-btn" title="Refresh">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </nav>
 
   <!-- Main content -->
   <main class="main">
-    <!-- Top bar -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <h1 class="page-title" id="page-title">Dashboard</h1>
-        <p class="page-subtitle" id="page-subtitle">Institutional memory at a glance</p>
-      </div>
-      <div class="topbar-right">
-        <button class="btn btn-ghost" id="refresh-btn" title="Refresh data">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Refresh
-        </button>
-        <button class="btn btn-ghost" id="add-memory-btn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          Add Memory
-        </button>
-      </div>
-    </header>
 
     <!-- Views -->
     <div class="view active" id="view-dashboard">
+      <section class="hero">
+        <div class="hero__status-badge">
+          <div class="status-dot"></div>
+          SYSTEM ACTIVE &mdash; DATAHUB MEMORY LAYER
+        </div>
+        <h1 class="text-hero animate-fade-in-up">
+          Anamnesis
+        </h1>
+        <p class="hero__subtitle text-slate-300">
+          A persistent memory layer for AI data agents, providing cross-execution recall, automated fault localization, and state restoration.
+        </p>
+        <div class="hero__subtitle-line"></div>
+      </section>
       <!-- Stats row -->
       <div class="stats-grid" id="stats-grid">
-        <div class="stat-card" id="stat-total">
+        <div class="stat-card stat-card--blue card-stagger-in" style="animation-delay: 0.1s" id="stat-total"
+             role="button" tabindex="0"
+             data-action="memories" data-filter-type=""
+             aria-label="View all memories">
           <div class="stat-icon stat-icon-blue">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-body">
             <span class="stat-value" id="stat-total-val">—</span>
             <span class="stat-label">Total Memories</span>
+            <span class="stat-subtitle">Persistent knowledge objects stored in DataHub for future agent inheritance.</span>
           </div>
+          <span class="stat-card__cta">View all →</span>
         </div>
-        <div class="stat-card" id="stat-incidents">
+        <div class="stat-card stat-card--red card-stagger-in" style="animation-delay: 0.2s" id="stat-incidents"
+             role="button" tabindex="0"
+             data-action="memories" data-filter-type="INCIDENT"
+             aria-label="Filter by Incidents">
           <div class="stat-icon stat-icon-red">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-body">
             <span class="stat-value" id="stat-incidents-val">—</span>
             <span class="stat-label">Incidents</span>
+            <span class="stat-subtitle">Schema breaks & data contract anomalies detected across lineage.</span>
           </div>
+          <span class="stat-card__cta">Filter →</span>
         </div>
-        <div class="stat-card" id="stat-schema-fixes">
+        <div class="stat-card stat-card--amber card-stagger-in" style="animation-delay: 0.3s" id="stat-schema-fixes"
+             role="button" tabindex="0"
+             data-action="memories" data-filter-type="SCHEMA_FIX"
+             aria-label="Filter by Schema Fixes">
           <div class="stat-icon stat-icon-amber">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
           </div>
           <div class="stat-body">
             <span class="stat-value" id="stat-schema-val">—</span>
             <span class="stat-label">Schema Fixes</span>
+            <span class="stat-subtitle">Automated patch scripts verified & recorded as reusable fix patterns.</span>
           </div>
+          <span class="stat-card__cta">Filter →</span>
         </div>
-        <div class="stat-card" id="stat-resolved">
+        <div class="stat-card stat-card--green card-stagger-in" style="animation-delay: 0.4s" id="stat-resolved"
+             role="button" tabindex="0"
+             data-action="memories" data-filter-type="" data-filter-resolved="true"
+             aria-label="Filter by Resolved memories">
           <div class="stat-icon stat-icon-green">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
           <div class="stat-body">
             <span class="stat-value" id="stat-resolved-val">—</span>
             <span class="stat-label">Resolved</span>
+            <span class="stat-subtitle">Incidents auto-restored & verified closed via DataHub MCP server.</span>
           </div>
+          <span class="stat-card__cta">Filter →</span>
         </div>
       </div>
 
       <!-- Memory Constellation — full-width graph panel -->
+      <div class="section-divider"></div>
+      <div class="section-label">
+        <span class="text-label">Memory</span>
+        <span class="text-label">Constellation</span>
+      </div>
       <section class="card constellation-card" id="constellation-section">
         <div class="constellation-header">
           <div>
@@ -188,7 +213,7 @@
               <option value="true">Resolved</option>
             </select>
           </div>
-          <button class="btn btn-ghost btn-sm" id="mem-add-btn">+ Add Memory</button>
+          <button class="btn btn-primary btn-sm" id="mem-add-btn">+ Add Memory</button>
         </div>
         <div id="memories-table-wrap">
           <table class="mem-table" id="memories-table">
@@ -229,7 +254,7 @@
                 <span class="toggle-text">Auto-capture baseline on first run</span>
               </label>
             </div>
-            <button class="btn btn-ghost" id="detect-btn" style="width:100%">
+            <button class="btn btn-primary" id="detect-btn" style="width:100%">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               Run Detection
             </button>
@@ -250,7 +275,7 @@
               <label class="form-label">Schema Diff (JSON)</label>
               <textarea id="diagnose-diff" class="form-textarea" rows="5" placeholder='{"removed":["currency"],"added":["region"],"type_changes":[]}'></textarea>
             </div>
-            <button class="btn btn-ghost" id="diagnose-btn" style="width:100%">
+            <button class="btn btn-primary" id="diagnose-btn" style="width:100%">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Run Diagnosis
             </button>
@@ -267,13 +292,18 @@
               <label class="form-label">Dataset URN</label>
               <input type="text" id="combo-urn" class="form-input" placeholder="urn:li:dataset:(…)" />
             </div>
-            <button class="btn btn-ghost" id="combo-btn" style="width:100%">
+            <button class="btn btn-primary" id="combo-btn" style="width:100%">
               Run Full Analysis
             </button>
           </div>
           <div id="combo-result" class="result-panel hidden"></div>
         </div>
 
+        <div class="section-divider"></div>
+        <div class="section-label">
+          <span class="text-label">Pipeline</span>
+          <span class="text-label">Full Loop</span>
+        </div>
         <div class="card detect-combo-card" style="grid-column:1/-1">
           <div class="card-header">
             <h2 class="card-title">⚡ Full Loop — Detect → Diagnose → Recall → Fix → Write</h2>
@@ -332,6 +362,11 @@
 
     <!-- Timeline view -->
     <div class="view" id="view-timeline">
+      <div class="section-divider"></div>
+      <div class="section-label">
+        <span class="text-label">Incident</span>
+        <span class="text-label">Timeline</span>
+      </div>
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">Memory Timeline</h2>
@@ -342,6 +377,107 @@
         </div>
       </div>
     </div>
+
+    <!-- About view -->
+    <div class="view" id="view-about">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero__status-badge">
+          <div class="status-dot"></div>
+          SYSTEM ARCHITECTURE &mdash; HOW ANAMNESIS THINKS
+        </div>
+        <h1 class="text-hero animate-fade-in-up">About</h1>
+        <p class="hero__subtitle text-slate-300">
+          Anamnesis is a persistent memory layer for AI data agents, built on DataHub —
+          designed so that every resolved incident becomes institutional knowledge the
+          next agent inherits, instead of starting from zero.
+        </p>
+        <div class="hero__subtitle-line"></div>
+      </section>
+
+      <!-- The Problem -->
+      <div class="section-divider"></div>
+      <div class="section-label">
+        <span class="text-label">The</span>
+        <span class="text-label">Problem</span>
+      </div>
+      <div class="about-prose card">
+        <p>
+          Every data team has felt this: a schema breaks, an engineer spends an hour
+          tracing the root cause through lineage, writes a fix — and the knowledge
+          dies with that conversation. Two months later, a different engineer hits
+          the same class of problem and starts from zero again.
+        </p>
+        <p class="text-muted">
+          AI agents built on top of today's data stacks inherit this same amnesia.
+          Without persistent memory, every agent run reasons in isolation.
+        </p>
+      </div>
+
+      <!-- How It Works — 5 stage cards -->
+      <div class="section-divider"></div>
+      <div class="section-label">
+        <span class="text-label">How It</span>
+        <span class="text-label">Works</span>
+      </div>
+      <div class="about-stage-grid" id="about-stage-grid"></div>
+
+      <!-- Built on DataHub -->
+      <div class="section-divider"></div>
+      <div class="section-label">
+        <span class="text-label">Built</span>
+        <span class="text-label">On DataHub</span>
+      </div>
+      <div class="about-prose card">
+        <p>
+          Every stage reads and writes through DataHub's MCP Server — lineage
+          traversal for diagnosis, vector-indexed recall for memory search, and a
+          custom <code class="data-value">IncidentMemory</code> aspect written back
+          to the graph so the knowledge compounds with every run, not just this one.
+        </p>
+        <ul class="judging-criteria-list">
+          <li><strong>Bidirectional Graph Sync:</strong> Reads lineage via MCP Server & writes <code class="data-value">IncidentMemory</code> aspects back to DataHub.</li>
+          <li><strong>Cross-Execution Recall:</strong> Uses vector embeddings to prevent hallucination and duplicate investigation.</li>
+          <li><strong>Production Quality:</strong> Clean open-source architecture with sample test suites and live demo setup.</li>
+        </ul>
+      </div>
+
+      <!-- Tech stack chips -->
+      <div class="section-divider"></div>
+      <div class="section-label">
+        <span class="text-label">Tech</span>
+        <span class="text-label">Stack</span>
+      </div>
+      <div class="about-chip-row" id="about-chip-row"></div>
+
+      <!-- CTA -->
+      <div class="section-divider"></div>
+      <div class="about-cta">
+        <button class="btn btn-ghost" onclick="window.location.hash='#view-dashboard'">
+          View Live Demo
+        </button>
+        <a href="https://github.com/AmitK241/Anamnesis" class="btn btn-ghost" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+        <a href="https://github.com/AmitK241/Anamnesis/tree/main/examples" target="_blank" class="btn btn-sample-artifacts" rel="noopener">
+          <span>📁 View Sample Memory Artifacts & Graph Diffs</span>
+        </a>
+      </div>
+    </div>
+
+    <footer class="site-footer">
+      <div class="site-footer__contact">
+        <span class="text-muted">Built for the DataHub Agent Hackathon 2026</span>
+        <div class="hackathon-badges">
+          <span class="badge badge-emerald">Apache 2.0 License</span>
+          <span class="badge badge-cyan">DataHub MCP Server Native</span>
+          <span class="badge badge-hackathon">DataHub Agent Hackathon 2026 Entry</span>
+        </div>
+      </div>
+      <div class="site-footer__legal text-muted">
+        <a href="https://github.com/AmitK241/Anamnesis" class="footer-link">GitHub</a>
+      </div>
+    </footer>
   </main>
 
   <!-- Add Memory Modal -->
@@ -419,6 +555,7 @@
   <!-- Toast notifications -->
   <div class="toast-container" id="toast-container"></div>
 
+  <script type="module" src="cubes-bg.js"></script>
   <script src="memory-graph.js"></script>
   <script src="app.js"></script>
 </body>
