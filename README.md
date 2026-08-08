@@ -1,23 +1,6 @@
 <p align="center">
   <a href="https://anamnesis-agent.onrender.com/" target="_blank">
-    <svg width="110" height="110" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 0px 16px rgba(34, 211, 238, 0.95));">
-      <!-- Outer Cyan Glowing Triangle -->
-      <polygon points="50,10 90,85 10,85" stroke="#00d2ff" stroke-width="5" stroke-linejoin="round" fill="none" />
-      
-      <!-- Top Dashed Line -->
-      <line x1="50" y1="18" x2="50" y2="46" stroke="#00e5ff" stroke-width="3.5" stroke-dasharray="3 3" stroke-linecap="round" />
-      
-      <!-- Inner Bottom Rays -->
-      <line x1="12" y1="83" x2="50" y2="52" stroke="#00b0ff" stroke-width="4" stroke-linecap="round" />
-      <line x1="88" y1="83" x2="50" y2="52" stroke="#00b0ff" stroke-width="4" stroke-linecap="round" />
-      
-      <!-- Orange Glow Aura -->
-      <circle cx="50" cy="52" r="12" fill="#ff9100" opacity="0.45" style="filter: blur(4px);" />
-      <circle cx="50" cy="52" r="6" fill="#ffab40" opacity="0.8" />
-      
-      <!-- Center Bright White Node -->
-      <circle cx="50" cy="52" r="4.5" fill="#ffffff" />
-    </svg>
+    <img src="docs/screenshots/logo.svg" alt="Anamnesis Logo" width="110" />
   </a>
 </p>
 
