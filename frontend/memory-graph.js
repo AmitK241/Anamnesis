@@ -11,6 +11,7 @@
  */
 
 /* ─── Read computed CSS tokens (must be plain strings in SVG attrs) ────── */
+const API_BASE_URL = typeof window !== 'undefined' ? window.location.origin : '';
 const _cs = getComputedStyle(document.documentElement);
 const GC = {
   TEXT:         _cs.getPropertyValue('--color-pale-mist').trim()    || '#c6c6c6',
@@ -595,8 +596,8 @@ function renderMemoryGraph(containerId, graphData) {
 /* ─── Fetch from /api/incidents and (re)render ──────────────────────────── */
 async function refreshMemoryGraph(containerId) {
   try {
-    const res = await fetch(`${API}/api/incidents`);
-    if (!res.ok) throw new Error(`/api/incidents returned ${res.status}`);
+    const res = await fetch(`${API_BASE_URL}/api/graph`);
+    if (!res.ok) throw new Error(`/api/graph returned ${res.status}`);
     const graphData = await res.json();
     renderMemoryGraph(containerId, graphData);
   } catch (err) {

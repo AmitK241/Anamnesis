@@ -4,7 +4,6 @@
  */
 
 /* ─── Config ─── */
-const API_BASE_URL = window.location.origin;
 
 /* ─── State ─── */
 const state = {
