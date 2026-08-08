@@ -594,6 +594,36 @@ def get_incidents_graph():
     
     all_raw = store.all()
 
+    if not all_raw:
+        import urllib.request
+        import os
+        server = os.getenv("DATAHUB_GMS_SERVER", "http://localhost:8080").rstrip("/")
+        try:
+            urllib.request.urlopen(f"{server}/health", timeout=1.0)
+        except Exception:
+            from backend.api.demo_data import DEMO_MEMORIES
+            # Reconstruct into MemoryRecord-like objects or just bypass to dicts
+            all_raw = []
+            from backend.core.memory_store import MemoryRecord, MemoryType
+            for fm in DEMO_MEMORIES:
+                try:
+                    all_raw.append(MemoryRecord(
+                        id=fm.get("id"),
+                        type=MemoryType(fm.get("type")),
+                        entity_urn=fm.get("entity_urn"),
+                        title=fm.get("title"),
+                        summary=fm.get("summary"),
+                        detail=fm.get("detail"),
+                        tags=fm.get("tags"),
+                        severity=fm.get("severity"),
+                        resolved=fm.get("resolved"),
+                        created_at=fm.get("created_at"),
+                        updated_at=fm.get("updated_at"),
+                        agent_id=fm.get("agent_id")
+                    ))
+                except Exception as e:
+                    pass
+
     for rec in all_raw:
         if rec.type.name == "INCIDENT":
             detail = rec.detail or {}
