@@ -577,7 +577,14 @@ async function toggleResolved(id, currentlyResolved, fromDetail = false) {
     refresh();
     refreshStats(); // Always update stat cards regardless of active view
   } catch (err) {
-    toast(err.message, 'error');
+    if (err.message.toLowerCase().includes('not found')) {
+      toast('Memory record no longer exists — refreshing stale data...', 'warning');
+      if (fromDetail) closeDetail();
+      refresh();
+      refreshStats();
+    } else {
+      toast(err.message, 'error');
+    }
   }
 }
 
@@ -591,7 +598,14 @@ async function deleteMemory(id, fromDetail = false) {
     refresh();
     refreshStats(); // Always update stat cards regardless of active view
   } catch (err) {
-    toast(err.message, 'error');
+    if (err.message.toLowerCase().includes('not found')) {
+      toast('Memory record no longer exists — refreshing stale data...', 'warning');
+      if (fromDetail) closeDetail();
+      refresh();
+      refreshStats();
+    } else {
+      toast(err.message, 'error');
+    }
   }
 }
 
