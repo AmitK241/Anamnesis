@@ -557,7 +557,13 @@ async function openDetail(id) {
     $('detail-close').onclick = closeDetail;
     show($('detail-overlay'));
   } catch (err) {
-    toast(err.message, 'error');
+    if (err.message.toLowerCase().includes('not found')) {
+      toast('Memory record no longer exists — refreshing stale data...', 'warning');
+      refresh();
+      refreshStats();
+    } else {
+      toast(err.message, 'error');
+    }
   }
 }
 
