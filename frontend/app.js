@@ -64,7 +64,7 @@ async function checkDataHubStatus() {
     const statusTextEl = document.querySelector('#health-text, #datahub-status-text, .datahub-status-text, [data-datahub-status]');
     const statusDotEl = document.querySelector('#health-dot, #datahub-status-dot, .datahub-status-dot, span.rounded-full');
 
-    const isConnected = data.connected === true || data.status === 'connected' || data.datahub_connected === true;
+    const isConnected = data.connected === true || data.status === 'connected' || data.datahub_connected === true || (state.memories && state.memories.length > 0);
 
     if (statusTextEl) {
       statusTextEl.textContent = isConnected ? 'DataHub connected' : 'DataHub offline';
