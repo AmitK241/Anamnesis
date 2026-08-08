@@ -2435,3 +2435,23 @@ nav.site-nav, header, .navbar-container {
     gap: 8px !important;
   }
 }
+
+.banner-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--color-amber);
+  padding: 12px 20px;
+  margin: 16px auto;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  max-width: 800px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.02em;
+}
+.health-dot.demo {
+  background: var(--color-slate-400, #94a3b8);
+  box-shadow: 0 0 4px var(--color-slate-400, #94a3b8);
+}
+

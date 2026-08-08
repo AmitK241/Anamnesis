@@ -64,22 +64,50 @@ async function checkDataHubStatus() {
     const statusTextEl = document.querySelector('#health-text, #datahub-status-text, .datahub-status-text, [data-datahub-status]');
     const statusDotEl = document.querySelector('#health-dot, #datahub-status-dot, .datahub-status-dot, span.rounded-full');
 
-    const isConnected = data.connected === true || data.status === 'connected' || data.datahub_connected === true || (state.memories && state.memories.length > 0);
+    const isConnected = data.datahub_connected;
+    
+    const demoBanner = document.getElementById('demo-banner');
+    const writeBtns = [
+      document.getElementById('mem-add-btn'),
+      document.getElementById('detail-resolve-btn'),
+      document.getElementById('fullloop-btn')
+    ];
 
     if (statusTextEl) {
-      statusTextEl.textContent = isConnected ? 'DataHub connected' : 'DataHub offline';
+      statusTextEl.textContent = isConnected ? 'DataHub connected' : 'Demo Mode';
       statusTextEl.className = 'health-text';
       statusTextEl.style.cssText = 'font-family: var(--font-primary); font-size: 0.75rem; font-weight: 500; letter-spacing: normal; color: #e2e8f0; white-space: nowrap;';
     }
     
     if (statusDotEl) {
-      statusDotEl.className = 'health-dot';
+      statusDotEl.className = isConnected ? 'health-dot ok' : 'health-dot demo';
       if (isConnected) {
         statusDotEl.style.cssText = 'background-color: #34d399; box-shadow: 0 0 8px #34d399; width: 0.5rem; height: 0.5rem; border-radius: 9999px; display: inline-block;';
       } else {
-        statusDotEl.style.cssText = 'background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; width: 0.5rem; height: 0.5rem; border-radius: 9999px; display: inline-block;';
+        statusDotEl.style.cssText = ''; // Let CSS handle the demo color
       }
     }
+    
+    if (demoBanner) {
+      if (isConnected) {
+        demoBanner.classList.add('hidden');
+      } else {
+        demoBanner.classList.remove('hidden');
+      }
+    }
+    
+    writeBtns.forEach(btn => {
+      if (btn) {
+        if (isConnected) {
+          btn.disabled = false;
+          btn.title = '';
+        } else {
+          btn.disabled = true;
+          btn.title = 'Live pipeline runs require local DataHub — see demo video.';
+        }
+      }
+    });
+
   } catch (err) {
     console.warn("Status check warning:", err);
   }

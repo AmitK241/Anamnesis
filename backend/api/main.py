@@ -182,11 +182,22 @@ class FullLoopRequest(BaseModel):
 @app.get("/api/status")
 @app.get("/health")
 async def health_check():
-    return {
-        "status": "connected",
-        "datahub_connected": True,
-        "message": "DataHub Memory Layer Active"
-    }
+    import urllib.request
+    import os
+    server = os.getenv("DATAHUB_GMS_SERVER", "http://localhost:8080").rstrip("/")
+    try:
+        urllib.request.urlopen(f"{server}/health", timeout=1.0)
+        return {
+            "status": "connected",
+            "datahub_connected": True,
+            "message": "DataHub Memory Layer Active"
+        }
+    except Exception as exc:
+        return {
+            "status": "demo_mode",
+            "datahub_connected": False,
+            "message": "DataHub Unreachable — Serving Demo Dataset"
+        }
 
 
 @app.get("/api/memories")
@@ -212,6 +223,15 @@ def list_memories(
             limit=limit,
         )
     if len(records) == 0:
+        if _store.count == 0:
+            import urllib.request
+            import os
+            server = os.getenv("DATAHUB_GMS_SERVER", "http://localhost:8080").rstrip("/")
+            try:
+                urllib.request.urlopen(f"{server}/health", timeout=1.0)
+            except Exception:
+                from backend.api.demo_data import DEMO_MEMORIES
+                return {"count": len(DEMO_MEMORIES), "records": DEMO_MEMORIES, "is_demo": True}
         return {"count": 0, "records": []}
     return {"count": len(records), "records": [r.to_dict() for r in records]}
 
@@ -220,6 +240,17 @@ def list_memories(
 def get_memory(record_id: str):
     rec = _store.get(record_id)
     if not rec:
+        if _store.count == 0:
+            import urllib.request
+            import os
+            server = os.getenv("DATAHUB_GMS_SERVER", "http://localhost:8080").rstrip("/")
+            try:
+                urllib.request.urlopen(f"{server}/health", timeout=1.0)
+            except Exception:
+                from backend.api.demo_data import DEMO_MEMORIES
+                for fm in DEMO_MEMORIES:
+                    if fm.get("id") == record_id or fm.get("incident_id") == record_id:
+                        return fm
         raise HTTPException(status_code=404, detail="Memory record not found")
     return rec.to_dict()
 
