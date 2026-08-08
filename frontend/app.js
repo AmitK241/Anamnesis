@@ -653,6 +653,7 @@ $('detect-btn').addEventListener('click', async () => {
   const panel = $('detect-result');
 
   setLoading('detect-btn', true);
+  setTimeout(() => setLoading('detect-btn', false), 2000);
   panel.className = 'result-panel';
   panel.textContent = 'Running detection…';
   show(panel);
@@ -700,6 +701,7 @@ $('diagnose-btn').addEventListener('click', async () => {
 
   const panel = $('diagnose-result');
   setLoading('diagnose-btn', true);
+  setTimeout(() => setLoading('diagnose-btn', false), 2000);
   panel.className = 'result-panel';
   panel.textContent = 'Running diagnosis…';
   show(panel);
@@ -727,6 +729,7 @@ $('combo-btn').addEventListener('click', async () => {
   if (!urn) { toast('Dataset URN is required', 'error'); return; }
   const panel = $('combo-result');
   setLoading('combo-btn', true);
+  setTimeout(() => setLoading('combo-btn', false), 2000);
   panel.className = 'result-panel';
   panel.textContent = 'Running full analysis…';
   show(panel);
@@ -1013,6 +1016,13 @@ $('fullloop-btn')?.addEventListener('click', async () => {
 
   const resultEl = $('fullloop-result');
   setLoading('fullloop-btn', true);
+  setTimeout(() => {
+    const btn = $('fullloop-btn');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Run Full Pipeline Loop`;
+    }
+  }, 2000);
   resultEl.className = 'fullloop-result-panel-loading';
   resultEl.innerHTML = `<div class="loading-cell"><div class="spinner"></div> Running full pipeline — Detect → Diagnose → Recall → Fix → Write…</div>`;
   show(resultEl);

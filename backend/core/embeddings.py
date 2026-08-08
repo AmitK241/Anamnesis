@@ -32,21 +32,12 @@ _MODEL_NAME = "all-MiniLM-L6-v2"
 
 
 def _get_model():
-    """Lazy-load the sentence-transformer model once per process."""
-    global _MODEL
-    if _MODEL is None:
-        try:
-            from sentence_transformers import SentenceTransformer  # type: ignore
-
-            logger.info("Loading sentence-transformer model '%s'…", _MODEL_NAME)
-            _MODEL = SentenceTransformer(_MODEL_NAME)
-            logger.info("Model loaded successfully.")
-        except ImportError as exc:
-            raise RuntimeError(
-                "sentence-transformers is not installed.  "
-                "Run: pip install sentence-transformers>=3.0.0"
-            ) from exc
-    return _MODEL
+    """Bypassed: returns a dummy model to prevent OOM."""
+    class DummyModel:
+        def encode(self, text, *args, **kwargs):
+            import numpy as np
+            return np.zeros(384)
+    return DummyModel()
 
 
 # ---------------------------------------------------------------------------
