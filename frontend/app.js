@@ -4,7 +4,7 @@
  */
 
 /* ─── Config ─── */
-const API = 'http://localhost:8888';
+const API_BASE_URL = window.location.origin;
 
 /* ─── State ─── */
 const state = {
@@ -35,7 +35,7 @@ function toast(msg, type = 'info') {
 
 /* ─── API helpers ─── */
 async function apiFetch(path, opts = {}) {
-  const url = `${API}${path}`;
+  const url = `${API_BASE_URL}${path}`;
   try {
     const res = await fetch(url, {
       headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
@@ -58,7 +58,7 @@ async function apiFetch(path, opts = {}) {
 /* ─── Health check ─── */
 async function checkDataHubStatus() {
   try {
-    const res = await fetch('/api/health');
+    const res = await fetch(`${API_BASE_URL}/api/health`);
     const data = await res.json();
     
     // Adjusted selector to also catch the existing #health-text elements

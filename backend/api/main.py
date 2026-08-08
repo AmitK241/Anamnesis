@@ -199,7 +199,7 @@ def health_check():
         return {
             "status": "connected",
             "datahub_connected": True,
-            "mode": "memory_fallback"
+            "mode": "fallback"
         }
 
     # Return standardized response for frontend matcher
