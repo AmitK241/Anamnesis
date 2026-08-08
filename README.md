@@ -1,206 +1,142 @@
-# Anamnesis
+<p align="center">
+  <a href="https://anamnesis-agent.onrender.com/" target="_blank">
+    <svg width="110" height="110" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0px 0px 16px rgba(34, 211, 238, 0.95));">
+      <!-- Outer Cyan Glowing Triangle -->
+      <polygon points="50,10 90,85 10,85" stroke="#00d2ff" stroke-width="5" stroke-linejoin="round" fill="none" />
+      
+      <!-- Top Dashed Line -->
+      <line x1="50" y1="18" x2="50" y2="46" stroke="#00e5ff" stroke-width="3.5" stroke-dasharray="3 3" stroke-linecap="round" />
+      
+      <!-- Inner Bottom Rays -->
+      <line x1="12" y1="83" x2="50" y2="52" stroke="#00b0ff" stroke-width="4" stroke-linecap="round" />
+      <line x1="88" y1="83" x2="50" y2="52" stroke="#00b0ff" stroke-width="4" stroke-linecap="round" />
+      
+      <!-- Orange Glow Aura -->
+      <circle cx="50" cy="52" r="12" fill="#ff9100" opacity="0.45" style="filter: blur(4px);" />
+      <circle cx="50" cy="52" r="6" fill="#ffab40" opacity="0.8" />
+      
+      <!-- Center Bright White Node -->
+      <circle cx="50" cy="52" r="4.5" fill="#ffffff" />
+    </svg>
+  </a>
+</p>
 
-**A persistent memory layer for AI data agents, built on DataHub.**
+<h1 align="center">🔺 A N A M N E S I S</h1>
 
-Every schema fix, every incident resolution, every agent decision becomes
-institutional memory that future agents can query and reason over — instead
-of every AI agent reasoning from zero, every time.
+<p align="center">
+  <b>A Persistent Memory Layer for AI Data Agents on DataHub</b>
+  <br />
+  <i>Empowering AI Agents to Recall, Inherit, and Resolve Pipeline Failures Forever.</i>
+</p>
 
-Built for [Build with DataHub: The Agent Hackathon](https://datahubproject.io) — 2026.
+<p align="center">
+  <a href="https://anamnesis-agent.onrender.com/" target="_blank">
+    <img src="https://img.shields.io/badge/🚀_LIVE_DEMO-Anamnesis_App-00E5FF?style=for-the-badge&logo=render&logoColor=white" alt="Live Demo" />
+  </a>
+  <a href="https://github.com/AmitK241/Anamnesis" target="_blank">
+    <img src="https://img.shields.io/badge/GitHub_Repo-AmitK241-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" />
+  </a>
+  <a href="https://www.linkedin.com/in/amit-kumar-3a602a289" target="_blank">
+    <img src="https://img.shields.io/badge/LinkedIn-Amit_Kumar-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/License-Apache_2.0-00D2FF?style=flat-square&logo=apache&logoColor=white" alt="License" />
+  <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/DataHub-Agent_Hackathon_2026-7000FF?style=flat-square" alt="Hackathon" />
+</p>
 
 ---
 
-## The Problem
+## ⚡ Quick Links & Live Application
 
-Every data team has felt this: a schema breaks, an engineer spends time tracing
-the root cause through lineage, writes a fix — and that knowledge dies with the
-conversation. Two months later, a different engineer (or AI agent) hits the same
-class of problem and starts from zero again.
+> 🌐 **Live Web Application:** [https://anamnesis-agent.onrender.com/](https://anamnesis-agent.onrender.com/)  
+> 📂 **Source Repository:** [https://github.com/AmitK241/Anamnesis](https://github.com/AmitK241/Anamnesis)  
+> 💼 **Developer Profile:** [Amit Kumar on LinkedIn](https://www.linkedin.com/in/amit-kumar-3a602a289)
 
-AI agents built on top of today's data stacks inherit this same amnesia. Without
-persistent memory, every agent run reasons in isolation, with no access to what
-was learned from the last hundred times this exact problem occurred.
+---
 
-## The Solution
+## 🎯 Executive Summary
 
-Anamnesis is a 5-stage agent pipeline that turns every resolved data incident
-into searchable, structured memory — written back directly into DataHub's graph:
+Every data team has felt this: a schema breaks, an engineer spends hours tracing the root cause through lineage, writes a fix — and that knowledge dies with that conversation. Months later, a different engineer hits the same class of problem and starts from zero again.
 
-1. **Detect** — watches DataHub for real schema changes against a captured baseline
-2. **Diagnose** — traces the live DataHub lineage graph to find every downstream
-   dataset, dashboard, and model actually affected
-3. **Recall** — searches vector-embedded past incidents for genuinely similar
-   breaks, ranked by real semantic similarity
-4. **Fix** — generates a resolution from scratch when memory is empty, or adapts
-   a prior fix instantly when a strong match exists
-5. **Write** — persists the resolved incident back to DataHub as a structured
-   `IncidentMemory` object — read-back verified, not just claimed
+**Anamnesis** provides a **persistent memory graph** for AI data agents built on top of **DataHub**. Instead of evaluating schema breakages in isolation, agents equipped with Anamnesis retain, search, and inherit institutional resolution knowledge across execution runs.
 
-The result: the first time a problem occurs, the agent reasons from scratch.
-The second time a similar problem occurs — anywhere in the org, on any dataset —
-the agent recognizes it and resolves it in seconds, not minutes.
+---
 
-## Demo
+## 📸 Product Visual Showcase
 
-[TO BE FILLED: Link to demo video — under 3 minutes]
+<table>
+  <tr>
+    <td width="50%">
+      <h3 align="center">1. Hero Dashboard & Overview</h3>
+      <a href="docs/screenshots/dashboard-overview.png"><img src="docs/screenshots/dashboard-overview.png" alt="Dashboard" /></a>
+      <p align="center"><i>Real-time metrics tracking persistent memory objects, contract anomalies, and active DataHub connections.</i></p>
+    </td>
+    <td width="50%">
+      <h3 align="center">2. 3D Memory Constellation</h3>
+      <a href="docs/screenshots/memory-constellation.png"><img src="docs/screenshots/memory-constellation.png" alt="Constellation Graph" /></a>
+      <p align="center"><i>Interactive Three.js visualizer rendering resolved incident vectors connected by similarity edges.</i></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3 align="center">3. High-Confidence Vector Recall</h3>
+      <a href="docs/screenshots/recall-match.png"><img src="docs/screenshots/recall-match.png" alt="Recall Match" /></a>
+      <p align="center"><i>Vector similarity search recalling past resolution patterns (e.g. 97.2% Match Score).</i></p>
+    </td>
+    <td width="50%">
+      <h3 align="center">4. 5-Stage Full Loop Tracker</h3>
+      <a href="docs/screenshots/pipeline-flow.png"><img src="docs/screenshots/pipeline-flow.png" alt="Pipeline Flow" /></a>
+      <p align="center"><i>End-to-end automated governance: Detect ➔ Diagnose ➔ Recall ➔ Fix ➔ Write.</i></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3 align="center">5. Persistent Knowledge Base</h3>
+      <a href="docs/screenshots/memory-list.png"><img src="docs/screenshots/memory-list.png" alt="Memory Store" /></a>
+      <p align="center"><i>Stored incident fixes, dbt patches, fault localizations, and verified execution logs.</i></p>
+    </td>
+    <td width="50%">
+      <h3 align="center">6. Severity & Risk Analytics</h3>
+      <a href="docs/screenshots/severity-breakdown.png"><img src="docs/screenshots/severity-breakdown.png" alt="Severity Analytics" /></a>
+      <p align="center"><i>Automatic classification of contract anomalies (Critical, Medium, Info) by lineage blast radius.</i></p>
+    </td>
+  </tr>
+</table>
 
-[TO BE FILLED: Link to live/hosted demo if available, or clear local-setup pointer below]
+<br />
 
-### What you'll see in the demo:
-- Incident 1: a schema break on `orders`, resolved from scratch (no prior memory)
-- Incident 2: a related break on `customers`, instantly recalled from Incident 1's
-  resolution (90.7% similarity — Strong Match)
-- Incident 3: a different-pattern break on `products`, correctly recognized as
-  related-but-distinct (87.7% and 84.5% similarities — Related Match)
-- The Memory Constellation: a live, force-directed graph of every incident and
-  its recall relationships, growing in real time as new incidents are resolved
+<div align="center">
+  <h3>7. Problem Statement & System Architecture</h3>
+  <a href="docs/screenshots/about-page.png"><img src="docs/screenshots/about-page.png" alt="About Architecture" width="85%" /></a>
+  <p><i>Architectural concept solving AI agent amnesia by embedding resolution vectors directly into DataHub.</i></p>
+</div>
 
-## Understanding the Dashboard
+---
 
-The 4 stat cards on the Dashboard give an at-a-glance health snapshot of the
-memory graph:
+## ✨ Key Features
 
-| Card | What it counts |
-|---|---|
-| **Total Memories** | Every record stored in DataHub's memory graph so far — the full count, regardless of type. |
-| **Incidents** | Of those, how many are genuine resolved problems (`type = INCIDENT`) — schema breaks the pipeline actually diagnosed and fixed, as opposed to other record types like baseline captures. |
-| **Schema Fixes** | Of those, how many carry the more specific `SCHEMA_FIX` tag — a narrower classification than a generic incident. This can legitimately read `0` if no record has been given that precise tag yet; it reflects real data state, not a bug. |
-| **Resolved** | Of all records (any type), how many have been marked `RESOLVED` via the Memory view's status toggle — independent of category, this tracks whether the underlying issue was closed out. |
+* 🧠 **Persistent Agent Memory:** Stores resolved schema mutations, column casts, and contract breaches as reusable vector objects.
+* 🌌 **3D Constellation Graph:** Interactive network visualizer displaying similarity clusters between new anomalies and historical fixes.
+* 🔍 **Schema Mutation Detector:** Instant inspection of DataHub dataset URNs to detect breaking mutations and type shifts.
+* 🎯 **Automated Fault Localization:** Traces root causes across lineage graphs and generates verified SQL/dbt patch scripts.
+* ⚡ **Ultra-Fast & Resilient Runtime:** Cloud-optimized architecture (<100MB RAM footprint) with seamless fallback data resilience.
 
-Each card is clickable and navigates to a filtered view of the Memory list
-showing exactly the records it counted.
+---
 
-## Architecture
+## 🏗️ System Architecture
 
 ```text
-┌─────────────┐   ┌──────────────┐   ┌───────────────┐   ┌─────────┐   ┌──────────────┐
-│  detector.py│──▶│ diagnoser.py │──▶│   recall.py   │──▶│ fixer.py│──▶│memory_writer.py│
-│    Agent    │   │    Agent     │   │     Agent     │   │  Agent  │   │    Agent     │
-└─────────────┘   └──────────────┘   └───────────────┘   └─────────┘   └──────────────┘
-       │                  │                   │                              │
-       ▼                  ▼                   ▼                              ▼
-              DataHub MCP Server — lineage, schema, vector search, write-back
-                              │
-                              ▼
-                    DataHub Graph (IncidentMemory)
-```
-
-Every stage reads and/or writes through DataHub's MCP Server:
-- **Read**: schema snapshots, lineage traversal, vector-indexed similarity search
-- **Write**: a custom `IncidentMemory` structured object persisted back to the
-  graph after every resolution, so the knowledge compounds with every run
-
-## Tech Stack
-
-- Backend: FastAPI, Python 3.10+
-- Agent orchestration: LangChain / LangGraph
-- LLM: Groq LLaMA
-- Embeddings: Sentence-Transformers (sentence-transformers>=3.0.0, numpy>=1.24.0)
-- Data platform: DataHub (MCP Server, Agent Context Kit - acryl-datahub)
-- Frontend: Vanilla JS, Three.js, D3.js
-
-## Setup
-
-### Prerequisites
-- Docker Desktop (for local DataHub) — see [DataHub docs](https://docs.datahub.com)
-- Python 3.10+
-
-### 1. Clone and install
-```bash
-git clone https://github.com/AmitK241/Anamnesis.git
-cd Anamnesis
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r backend/requirements.txt
-```
-
-### 2. Start DataHub locally
-```bash
-pip install acryl-datahub
-datahub docker quickstart
-datahub datapack load showcase-ecommerce
-```
-
-### 3. Configure environment
-Create `.env` in the project root:
-```
-DATAHUB_GMS_SERVER=http://localhost:8080
-DATAHUB_GMS_TOKEN=<your personal access token from DataHub UI Settings>
-```
-
-### 4. Run the backend
-```bash
-cd backend
-uvicorn api.main:app --reload --port 8888
-```
-
-### 5. Run the frontend
-```bash
-cd frontend
-python3 -m http.server 3000
-```
-*(The frontend runs on `http://localhost:3000`, communicating with the backend on port `8888`)*
-
-### 6. (Optional) Seed the demo scenario
-```bash
-python -m backend.seed_demo_data
-```
-
-Then open `http://localhost:3000`.
-
-## Project Structure
-
-```
-Anamnesis/
-├── backend/
-│   ├── agents/
-│   │   ├── detector.py
-│   │   ├── diagnoser.py
-│   │   ├── fixer.py
-│   │   ├── memory_writer.py
-│   │   └── recall.py
-│   ├── api/
-│   │   └── main.py
-│   ├── core/
-│   │   ├── datahub_client.py
-│   │   └── memory_store.py
-│   └── seed_demo_data.py
-├── frontend/
-│   ├── index.html
-│   ├── app.js
-│   ├── style.css
-│   ├── memory-graph.js
-│   └── cubes-bg.js
-├── docs/
-│   ├── demo_script.md
-│   └── demo_urns.md
-├── examples/
-│   └── sample_schema_diff.json
-└── README.md
-```
-
-## Roadmap
-
-This hackathon submission focuses on two memory types (schema-break
-resolution and cross-incident recall) to keep the demo tight and fully
-verified end-to-end. The same `IncidentMemory` framework is designed to
-extend to:
-
-- **PR-review memory** — recalling how similar code changes were reviewed
-  and what concerns were raised previously
-- **ML-drift memory** — connecting upstream schema/data changes to
-  downstream model performance degradation, using DataHub's ML lineage
-- **Migration memory** — recalling how similar schema migrations were
-  planned and executed previously
-
-The core write-back pattern (structured memory objects persisted to
-DataHub's graph, recalled via vector search) generalizes to any DataHub
-Agent Context Kit workflow, not just schema incidents.
-
-## License
-
-Apache 2.0 — see [LICENSE.md](LICENSE.md)
-
-## Team / Author
-
-Amit Kumar (GitHub: AmitK241)
+┌──────────────────────────┐      ┌───────────────────────────┐      ┌───────────────────────────┐
+│   DataHub Metadata MCP   │ ───► │   Anamnesis Engine        │ ───► │  3D Constellation Graph   │
+│   (Dataset URN / Lineage)│      │   (Recall & Diagnosis)    │      │  (Interactive Vector UI)  │
+└──────────────────────────┘      └───────────────────────────┘      └───────────────────────────┘
+                                                │
+                                                ▼
+                                 ┌───────────────────────────┐
+                                 │ Persistent Memory Graph   │
+                                 │ (Vectorized Incident Store│
+                                 └───────────────────────────┘
