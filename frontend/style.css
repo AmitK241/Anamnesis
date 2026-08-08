@@ -2455,3 +2455,5 @@ nav.site-nav, header, .navbar-container {
   box-shadow: 0 0 4px var(--color-slate-400, #94a3b8);
 }
 
+
+.hidden { display: none !important; }
