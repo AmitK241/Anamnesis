@@ -150,16 +150,33 @@ Every stage reads and/or writes through DataHub's MCP Server:
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/-Python-3776AB?style=flat-square&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/-Python_3-3776AB?style=flat-square&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)
-![LangChain](https://img.shields.io/badge/-LangChain-1C3C3C?style=flat-square)
+![Uvicorn](https://img.shields.io/badge/-Uvicorn-4051B5?style=flat-square)
+![Pydantic](https://img.shields.io/badge/-Pydantic-E92063?style=flat-square&logo=pydantic&logoColor=white)
 ![DataHub](https://img.shields.io/badge/-DataHub-7000FF?style=flat-square)
 ![D3.js](https://img.shields.io/badge/-D3.js-F9A03C?style=flat-square&logo=d3.js&logoColor=white)
 ![Three.js](https://img.shields.io/badge/-Three.js-000000?style=flat-square&logo=three.js&logoColor=white)
+![Render](https://img.shields.io/badge/-Render-46E3B7?style=flat-square&logo=render&logoColor=white)
 
 </div>
 
-*(Verify this list against your actual `requirements.txt` before final submission.)*
+**Backend — The Agents & API**
+- **Python 3** — core language powering the backend logic and agents
+- **FastAPI** — high-performance REST API (`/api/health`, `/api/memories`, `/api/detect`, and more)
+- **Uvicorn** — ASGI server running the FastAPI application
+- **Pydantic** — strict schema validation (`MemoryRecord`, `FixRequest`, and other core data models)
+- **LLM Integration** — `llama-3.1-8b-instant` powers the Detector, Diagnoser, Fixer, and Recall agents
+
+**Frontend — UI & Visualization**
+- **Vanilla HTML / CSS / JavaScript** — no heavy framework, kept lightweight and fast
+- **D3.js** — renders the interactive Memory Constellation network graph (`memory-graph.js`), connecting related incidents by real vector similarity
+- **Three.js** — powers the floating 3D cube background (`cubes-bg.js`)
+
+**Data & Infrastructure**
+- **DataHub (Acryl DataHub)** — the system of record; Anamnesis integrates directly with DataHub's GraphQL and REST APIs (via a custom `DataHubAdapter`) to read lineage graphs and write back custom `incidentMemory` aspects, turning the data catalog into an active memory store
+- **`memory_store.json`** — a lightweight local cache bridging DataHub's GraphQL responses and the frontend UI
+- **Render** — hosts the deployed UI-preview instance (see note above regarding live-DataHub connectivity)
 
 ---
 
