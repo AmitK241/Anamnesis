@@ -84,11 +84,22 @@ class MemoryStore:
             os.path.join(os.path.dirname(__file__), "..", "..", "memory_store.json"),
         )
         self._records: Dict[str, MemoryRecord] = {}
+        self._last_dh_sync: float = 0.0
         self._load()
 
     # ── persistence ──────────────────────────────────────────────────────────
 
     def _load(self) -> None:
+        # On Render, ensure we read fresh from DataHub (the true source of truth)
+        # instead of relying on the per-worker ephemeral local file cache.
+        if os.environ.get("RENDER"):
+            now = time.time()
+            # 10 second TTL to avoid spamming DataHub on burst requests
+            if now - self._last_dh_sync > 10.0:
+                self._last_dh_sync = now
+                self._sync_from_datahub()
+            return
+
         if not os.path.exists(self._path):
             return
         try:
@@ -105,7 +116,66 @@ class MemoryStore:
         except Exception as exc:
             logger.error("Failed to load memory store: %s", exc)
 
+    def _sync_from_datahub(self) -> None:
+        """Dynamically fetch memories from DataHub and overwrite the local in-memory cache."""
+        try:
+            from backend.core.datahub_client import DataHubAdapter
+            dh = DataHubAdapter()
+            memories = dh.scroll_incident_memories()
+            
+            new_records = {}
+            for m in memories:
+                incident_id = m.get('incident_id')
+                if not incident_id:
+                    continue
+                dataset_urn = m.get('dataset_urn', '')
+                root_cause = m.get('root_cause', '')
+                summary = m.get('resolution_code_diff', '')
+                
+                table_name = dataset_urn.split('.')[-1]
+                if table_name.endswith(',PROD)'):
+                    table_name = table_name.replace(',PROD)', '')
+
+                detail = {
+                    'root_cause': root_cause,
+                    'suggested_fix': summary,
+                    'downstream_impact': m.get('downstream_impact', []),
+                    'embedding_vector': m.get('embedding_vector', []),
+                    'time_saved_estimate': m.get('time_saved_estimate', 0)
+                }
+                if 'timestamp' in m:
+                    detail['timestamp'] = m['timestamp']
+
+                record = MemoryRecord(
+                    id=incident_id,
+                    type=MemoryType.INCIDENT,
+                    entity_urn=dataset_urn,
+                    title=f"Schema Break: {table_name}",
+                    summary=summary[:100] + '...' if summary else '',
+                    detail=detail,
+                    tags=[],
+                    severity='high',
+                    agent_id='anamnesis'
+                )
+                if 'timestamp' in m and m['timestamp']:
+                    record.created_at = float(m['timestamp'] / 1000.0)
+                    
+                new_records[incident_id] = record
+            
+            if new_records:
+                # Merge into existing records to avoid dropping newly added ones that DataHub 
+                # hasn't indexed yet, but prefer DataHub's version for existing ones.
+                self._records.update(new_records)
+                logger.info("Synced %d memories fresh from DataHub (Render mode)", len(new_records))
+        except Exception as exc:
+            logger.error("Failed to sync MemoryStore from DataHub on Render: %s", exc)
+
     def _save(self) -> None:
+        if os.environ.get("RENDER"):
+            # On Render, we rely on DataHub dynamically. Writing to the ephemeral disk 
+            # across multiple workers is unnecessary and prone to race conditions.
+            return
+
         try:
             with open(self._path, "w", encoding="utf-8") as fh:
                 json.dump(
