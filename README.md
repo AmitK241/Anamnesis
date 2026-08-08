@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://anamnesis-agent.onrender.com/" target="_blank">
-    <img src="docs/screenshots/logo.svg" alt="Anamnesis Logo" width="110" />
+    <img src="https://raw.githubusercontent.com/AmitK241/Anamnesis/main/docs/screenshots/logo.png" alt="Anamnesis Logo" width="130" />
   </a>
 </p>
 
