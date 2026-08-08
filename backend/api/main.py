@@ -212,8 +212,7 @@ def list_memories(
             limit=limit,
         )
     if len(records) == 0:
-        from backend.api.fallback_memories import FALLBACK_MEMORIES
-        return {"count": len(FALLBACK_MEMORIES), "records": FALLBACK_MEMORIES}
+        return {"count": 0, "records": []}
     return {"count": len(records), "records": [r.to_dict() for r in records]}
 
 
@@ -563,10 +562,6 @@ def get_incidents_graph():
     records = []
     
     all_raw = store.all()
-    if len(all_raw) == 0:
-        from backend.api.fallback_memories import FALLBACK_MEMORIES
-        from backend.core.memory_store import MemoryRecord
-        all_raw = [MemoryRecord.from_dict(d) for d in FALLBACK_MEMORIES]
 
     for rec in all_raw:
         if rec.type.name == "INCIDENT":

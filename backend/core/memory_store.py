@@ -94,8 +94,8 @@ class MemoryStore:
         # instead of relying on the per-worker ephemeral local file cache.
         if os.environ.get("RENDER"):
             now = time.time()
-            # 10 second TTL to avoid spamming DataHub on burst requests
-            if now - self._last_dh_sync > 10.0:
+            # 60 second TTL to avoid spamming DataHub and improve performance
+            if now - self._last_dh_sync > 60.0:
                 self._last_dh_sync = now
                 self._sync_from_datahub()
             return
@@ -197,7 +197,16 @@ class MemoryStore:
         return record
 
     def get(self, record_id: str) -> Optional[MemoryRecord]:
-        return self._records.get(record_id)
+        self._load()
+        rec = self._records.get(record_id)
+        if not rec and os.environ.get("RENDER"):
+            # Cache miss on Render! Another worker might have created it recently 
+            # and our TTL hasn't expired yet. Force a sync to be certain.
+            logger.info("Cache miss for %s. Forcing DataHub sync.", record_id)
+            self._sync_from_datahub()
+            self._last_dh_sync = time.time()
+            rec = self._records.get(record_id)
+        return rec
 
     def update(self, record_id: str, **kwargs: Any) -> Optional[MemoryRecord]:
         rec = self._records.get(record_id)

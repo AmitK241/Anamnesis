@@ -432,7 +432,9 @@ class DataHubAdapter:
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
 
-        for urn in urns:
+        import concurrent.futures
+
+        def fetch_aspect(urn: str) -> Optional[Dict[str, Any]]:
             encoded = urllib.parse.quote(urn, safe="")
             url = f"{self.server}/aspects/{encoded}?aspect=incidentMemory&version=0"
             try:
@@ -440,31 +442,25 @@ class DataHubAdapter:
                 with urllib.request.urlopen(req, timeout=2) as resp:
                     raw = json.loads(resp.read())
 
-                # Unwrap the aspect value (same pattern as verify_incident_memory.py)
                 aspect_data = raw.get("aspect", {})
                 if isinstance(aspect_data, dict) and "value" in aspect_data:
                     try:
                         aspect_data = json.loads(aspect_data["value"])
                     except json.JSONDecodeError:
                         pass
-                # Unwrap FQCN wrapper: {"com.anamnesis.incident.IncidentMemory": {...}}
                 if isinstance(aspect_data, dict) and len(aspect_data) == 1:
                     only_key = next(iter(aspect_data))
                     if "." in only_key:
                         aspect_data = aspect_data[only_key]
 
                 if not isinstance(aspect_data, dict):
-                    logger.debug("Skipping %s — aspect_data is not a dict", urn)
-                    continue
+                    return None
 
                 incident_id = aspect_data.get("incidentId", "")
-                # Skip blank sentinel records left by wipe operations
-                # (DataHub doesn't support hard-deleting custom aspects)
                 if not incident_id or incident_id == "__WIPED__":
-                    logger.debug("Skipping wiped/empty incidentMemory for %s", urn)
-                    continue
+                    return None
 
-                records.append({
+                return {
                     "dataset_urn":          urn,
                     "incident_id":          incident_id,
                     "root_cause":           aspect_data.get("rootCause", ""),
@@ -473,13 +469,17 @@ class DataHubAdapter:
                     "time_saved_estimate":  aspect_data.get("timeSavedEstimate", 0),
                     "downstream_impact":    aspect_data.get("downstreamImpact", []),
                     "timestamp":            aspect_data.get("timestamp", 0),
-                })
-                logger.debug("Loaded incidentMemory for %s (id=%s)", urn, incident_id)
-
+                }
             except Exception as exc:
-                # 404 means no aspect on this dataset — silently skip
                 if "404" not in str(exc):
                     logger.debug("Could not fetch incidentMemory for %s: %s", urn, exc)
+                return None
+
+        # Fetch in parallel (max 10 workers to not overwhelm GMS)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            for result in executor.map(fetch_aspect, urns):
+                if result:
+                    records.append(result)
 
         # ── Strategy 4: Local memory_store.json fallback ──────────────────────
         # Since DataHub GMS is unstable, augment/fallback with local store
