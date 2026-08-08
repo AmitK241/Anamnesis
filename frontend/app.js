@@ -302,7 +302,7 @@ async function loadDashboard() {
     // Stats
     const total = records.length;
     const incidents = records.filter(r => r.type === 'INCIDENT').length;
-    const schemaFixes = records.filter(r => r.type === 'SCHEMA_FIX').length;
+    const schemaFixes = records.filter(r => r.type === 'INCIDENT' && r.detail && r.detail.suggested_fix).length;
     const resolved = records.filter(r => r.resolved).length;
 
     animateNumber('stat-total-val', total);
@@ -335,7 +335,7 @@ async function refreshStats() {
     const records = data.records || [];
     const total      = records.length;
     const incidents  = records.filter(r => r.type === 'INCIDENT').length;
-    const schemaFixes = records.filter(r => r.type === 'SCHEMA_FIX').length;
+    const schemaFixes = records.filter(r => r.type === 'INCIDENT' && r.detail && r.detail.suggested_fix).length;
     const resolved   = records.filter(r => r.resolved).length;
     animateNumber('stat-total-val',     total);
     animateNumber('stat-incidents-val', incidents);
